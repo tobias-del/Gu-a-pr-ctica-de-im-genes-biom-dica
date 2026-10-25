@@ -19,7 +19,7 @@ from scipy import ndimage as ndi
 # CONFIGURACIÓN GENERAL Y RUTAS DE SALIDA
 # ---------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-VIDEO_PATH = os.path.join(BASE_DIR, "video_dilatacion_2.mp4")  # MODIFICAR CON EL NOMBRE DEL VIDEO
+VIDEO_PATH = os.path.join(BASE_DIR, "videos", "video_dilatacion_2.mp4") # MODIFICAR CON EL NOMBRE DEL VIDEO
 OUTPUT_DIR = os.path.join(BASE_DIR, "resultados_pipeline")    # CARPETA CON RESULTADOS
 lado_pixel = 0.7 #mm, cambiar según  corresponda
 
