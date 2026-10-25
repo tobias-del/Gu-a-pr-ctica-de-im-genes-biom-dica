@@ -19,7 +19,7 @@ from scipy import ndimage as ndi
 # CONFIGURACIÓN GENERAL Y RUTAS DE SALIDA
 # ---------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-VIDEO_PATH = os.path.join(BASE_DIR, "video_contraccion_2.mp4")  # MODIFICAR CON EL NOMBRE DEL VIDEO
+VIDEO_PATH = os.path.join(BASE_DIR, "video_dilatacion_2.mp4")  # MODIFICAR CON EL NOMBRE DEL VIDEO
 OUTPUT_DIR = os.path.join(BASE_DIR, "resultados_pipeline")    # CARPETA CON RESULTADOS
 lado_pixel = 0.7 #mm, cambiar según  corresponda
 
@@ -89,9 +89,9 @@ plt.savefig(path_frame_repr, bbox_inches="tight")
 plt.close()
 
 print(f"\nFrame representativo guardado en: {path_frame_repr}")
-print("Examine el gráfico guardado en Módulo 0, frame_representativo para definir los límites de la ROI del ojo.\n")
+print("Examine el gráfico guardado en el Módulo 0, frame_representativo para definir los límites de la ROI del ojo.\n")
 
-# 2. Input interactivo de límites para la ROI
+# 2. Input límites para la ROI
 print("<<<<<<<<<<<<<<<< Límites de la ROI >>>>>>>>>>>>>>>>>>>")
 x_inicial = int(input("Ingrese X inferior (x_inicial): "))
 x_final = int(input("Ingrese X superior (x_final): "))
@@ -118,7 +118,7 @@ axs[1].grid(True, color="white", linewidth=0.5, alpha=0.5)
 plt.tight_layout()
 plt.savefig(os.path.join(MOD_DIRS["0"], "roi_seleccionada.png"), bbox_inches="tight")
 plt.close()
-print("\n IMAGEN roi_seleccionada (Módulo 0): ROI resultante del slicing\n")
+print("\n IMAGEN roi_seleccionada: ROI resultante del slicing\n")
 
 cap.release()
 
@@ -127,7 +127,7 @@ cap.release()
 # --------------------------------------------------------------
 print_header("MÓDULO 1: Espacios de Color, Transformaciones y Filtrado Espacial")
 
-print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 print("1.1 Carga, Muestreo y Espacios de Color")
 print("-----------------------------------------")
 # 0. Submuestreo Espacial +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -264,7 +264,7 @@ plt.close()
 print("\n IMAGEN 02_espacios_de_color: muestra la descomposición en canales RGB y HSV\n")
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
+print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 print("1.2 Calidad, Transformaciones de Intensidad y Filtrado Espacial")
 print("---------------------------------------------------------------")
 # 3. Modificación de Brillo, Contraste e Histogramas +++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -827,7 +827,7 @@ psnr_esp = psnr(roi_gris, img_pasabajos_esp_u8, data_range=255)
 ssim_esp = ssim(roi_gris, img_pasabajos_esp_u8, data_range=255)
 
 # Mostrar resultados
-print("RECONTRUCCIÓN FRECUENCIAL: MÉTRICAS DE CALIDAD FRENTE A LA ROI ORIGINAL")
+print(" ---- RECONTRUCCIÓN FRECUENCIAL: MÉTRICAS DE CALIDAD FRENTE A LA ROI ORIGINAL ----")
 print(f"Reconstrucción Pasa-Bajos (Frecuencia)   -> PSNR: {psnr_frec:.2f} dB | SSIM: {ssim_frec:.4f}")
 print(f"Filtrado Espacial Gaussiano (Referencia) -> PSNR: {psnr_esp:.2f} dB | SSIM: {ssim_esp:.4f}")
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -838,7 +838,7 @@ print(f"Filtrado Espacial Gaussiano (Referencia) -> PSNR: {psnr_esp:.2f} dB | SS
 # -----------------------------------------------------------
 print_header("MÓDULO 2: Algoritmos de Segmentación y Limpieza Morfológica")
 
-print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 print("2.1 Algoritmos de Segmentación")
 print("------------------------------")
 
@@ -881,8 +881,8 @@ axs[2].axis("off")
 plt.tight_layout()
 plt.savefig(os.path.join(MOD_DIRS["2"], "01_sub_roi_estimacion_centro.png"), bbox_inches="tight")
 plt.close()
-print("\nIMAGEN 01_sub_roi_estimacion_centro: muestra la sub-roi de trabajo extraída automáticamente para la segmentación\n")
-print(f"\n Centro aproximado de la pupila en la ROI: (x={cx}, y={cy})")
+print("\nIMAGEN 01_sub_roi_estimacion_centro: muestra la sub-roi de trabajo extraída automáticamente para la segmentación")
+print(f" Centro aproximado de la pupila en la ROI: (x={cx}, y={cy})")
 print(f" Tamaño de la sub-ROI de trabajo: {iris_gris.shape[1]}x{iris_gris.shape[0]} px")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -957,11 +957,10 @@ axs[3].axis("off")
 plt.tight_layout()
 plt.savefig(os.path.join(MOD_DIRS["2"], "02_segmentacion_otsu.png"), bbox_inches="tight")
 plt.close()
-print("\nIMAGEN 02_segmentacion_otsu: muestra los umbrales establecidos por otsu en el histograma y las máscaras obtenidas\n")
-print("..............RESULTADOS OTSU..............")
-print(f"Umbral de Otsu global: {umbral_otsu:.0f}")
-print(f"Umbrales en cada pasada: {[int(u) for u in umbrales_otsu]}")
-print(f"Solidez de la máscara final: {solidez(mascara_otsu):.3f}")
+print("\nIMAGEN 02_segmentacion_otsu: muestra los umbrales establecidos por otsu en el histograma y las máscaras de la primera y la segunda pasada")
+print(f"  Umbral de Otsu global: {umbral_otsu:.0f}")
+print(f"  Umbrales en cada pasada: {[int(u) for u in umbrales_otsu]}")
+print(f"  Solidez de la máscara final: {solidez(mascara_otsu):.3f}")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # 3. Segmentación por Agrupamiento K-Means ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -992,7 +991,7 @@ for i, K in enumerate(range(2, 6)):
 plt.tight_layout()
 plt.savefig(os.path.join(MOD_DIRS["2"], "03_segmentacion_kmeans.png"), bbox_inches="tight")
 plt.close()
-print("\nIMAGEN 03_segmentacion_kmeans: muestra los agrupamientos para distitnos valores de K\n")
+print("\nIMAGEN 03_segmentacion_kmeans: clustering por k-means para distintos valores de K\n")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # 4. Segmentación por Contornos Activos (Snake) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1034,7 +1033,7 @@ axs[1].axis("off")
 plt.tight_layout()
 plt.savefig(os.path.join(MOD_DIRS["2"], "04_segmentacion_snake.png"), bbox_inches="tight")
 plt.close()
-print("\nIMAGEN 04_segmentacion_snake: muestra el contorno activo inicial y la máscara final\n")
+print("\nIMAGEN 04_segmentacion_snake: muestra el contorno inicial y la máscara final\n")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # 5. Segmentación por Watershed ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1117,16 +1116,16 @@ for ax, (nombre, m) in zip(axs, mascaras.items()):
     area_px = m.sum()
     diametro_eq = 2 * np.sqrt(area_px / np.pi)
     
-    ax.set_title(f"{nombre}\nÁrea = {area_px} px | D_eq = {diametro_eq:.1f} px ({diametro_eq * lado_pixel * 10:.2f} mm)")
+    ax.set_title(f"{nombre}\nÁrea = {area_px} px | D_eq = {diametro_eq:.1f} px)")
     ax.axis("off")
 
 plt.tight_layout()
 plt.savefig(os.path.join(MOD_DIRS["2"], "06_comparativa_metodos_segmentacion.png"), bbox_inches="tight")
 plt.close()
-print("\nIMAGEN 06_comparativa_metodos_segmentacion: compara las máscaras obtenidas en los distintos métodos de segmentación\n")
+print("\nIMAGEN 06_comparativa_metodos_segmentacion: compara las cuatro máscaras obtenidas\n")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 print("2.2 Morfología matemática para limpieza de máscara")
 print("--------------------------------------------------")
 
@@ -1175,7 +1174,7 @@ for i, (nombre, m) in enumerate(resultados_morf.items()):
 plt.tight_layout()
 plt.savefig(os.path.join(MOD_DIRS["2"], "07_operaciones_morfologicas.png"), bbox_inches="tight")
 plt.close()
-print("\nIMAGEN 07_operaciones_morfologicas: muestra distintas operaciones morfológicas aplicadas a la máscara de Otsu jerárquico\n")
+print("\nIMAGEN 07_operaciones_morfologicas: muestra varias operaciones morfológicas aplicadas a la máscara de Otsu\n")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # 8. Esqueletización (Eje Medio y Contorno Pupilar) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1207,8 +1206,8 @@ axs[2].axis("off")
 plt.tight_layout()
 plt.savefig(os.path.join(MOD_DIRS["2"], "08_esqueletizacion.png"), bbox_inches="tight")
 plt.close()
-print("\nIMAGEN 08_esqueletizacion: muestra el contorno del contorno pupilar obtenido por esqueletización en la máscara de Otsu\n")
-print(f"Perímetro aproximado (píxeles del contorno esqueletizado): {esqueleto_contorno.sum()} px\n")
+print("\nIMAGEN 08_esqueletizacion: muestra el contorno del contorno pupilar obtenido por esqueletización")
+print(f"  Perímetro aproximado (píxeles del contorno esqueletizado): {esqueleto_contorno.sum()} px\n")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # 9. Validación multiframe y métricas cuantitativas ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1257,14 +1256,14 @@ plt.tight_layout()
 path_anotacion_fig = os.path.join(MOD_DIRS["2"], "09_inspeccion_anotacion_manual.png")
 plt.savefig(path_anotacion_fig, bbox_inches="tight")
 plt.close()
-print("\nIMAGEN 09_inspeccion_anotaciones_manual: muestra los frames de validación para comparar los distintos métodos\n")
+print("\nIMAGEN 09_inspeccion_anotaciones_manual: muestra los frames de validación para comparar los métodos")
+print("\n||||||||||||||||||||||||||||||||||||||||||||")
+print("  SELECCIÓN MANUAL DE LÍMITES DE LA PUPILA")
+print("||||||||||||||||||||||||||||||||||||||||||||")
 
 print(f"Consulte la figura 09 para identificar las coordenadas exactas de la pupila.")
 
-# 3. Solicitud interactiva de límites manuales por terminal
-print("\n||||||||||||||||||||||||||||||||||||||||||||")
-print("  SELECCIÓN MANUAL DE LÍMITES DE LA PUPILA")
-print("||||||||||||||||||||||||||||||||||||||||||||\n")
+# 3. Solicitud de límites manuales por terminal
 
 anotaciones = {}
 for nombre in frames_val.keys():
@@ -1388,11 +1387,11 @@ for nombre, (_, ref, _) in resultados_val.items():
 # Guardado en CSV
 path_csv_val = os.path.join(MOD_DIRS["2"], "metricas_validacion.csv")
 df_val.to_csv(path_csv_val, index=False)
-print(f"\nTabla de métricas individuales exportada a: {path_csv_val}\n")
+print(f"\nTABLA metricas_validacion.csv: métricas Dice, Jaccard, Error de área respecto de las referencias para cada método\n")
 
 # Resumen numérico agrupado
-resumen = df_val.groupby("Método", sort=False)[["Dice",       "Jaccard / IoU", "Error de área [%]"]].agg(["mean", "std"]).round(3)
-print("================== RESUMEN DE MÉTRICAS (PROMEDIO Y DESVÍO ESTÁNDAR) ==================")
+resumen = df_val.groupby("Método", sort=False)[["Dice", "Jaccard / IoU", "Error de área [%]"]].agg(["mean", "std"]).round(3)
+print("======================= RESUMEN DE MÉTRICAS (PROMEDIO Y DESVÍO ESTÁNDAR) =======================")
 print(resumen.to_string())
 
 # 6. Superposición de contornos sobre los frames de validación
@@ -1419,7 +1418,7 @@ path_fig_superposicion = os.path.join(MOD_DIRS["2"], "10_superposicion_contornos
 plt.savefig(path_fig_superposicion, bbox_inches="tight")
 plt.close()
 
-print("\nIMAGEN 10_superposicion_contornos_validacion: muestra la superposición de los contornos de cada método, junto con las anotaciones a mano\n")
+print("\nIMAGEN 10_superposicion_contornos_validacion: muestra la superposición de los contornos de cada método, junto con las anotaciones manuales\n")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -1429,7 +1428,7 @@ print("\nIMAGEN 10_superposicion_contornos_validacion: muestra la superposición
 borde_afinado = esqueleto_contorno
 print_header("MÓDULO 3: Caracterización Morfométrica, Textura y Validación Manual")
 
-print("\n¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨")
+print("¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨")
 print("3.1 Descriptores Morfométricos y de Textura en el Frame Segmentado")
 print("------------------------------------------------------------------")
 
@@ -1498,24 +1497,14 @@ else:
     x_e, y_e = xc, yc
     eje_menor, eje_mayor, angulo = 0.0, 0.0, 0.0
 
-# Imprimir resultados
-print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-print("DESCRIPTORES MORFOMÉTRICOS EN EL FRAME SEGMENTADO")
-print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-print(f"Área (A): {area:.2f} px")
-print(f"Perímetro (P): {perimetro:.2f} px")
-print(f"Centroide (Xc, Yc): ({xc:.2f}, {yc:.2f}) px")
-print(f"Circularidad (C): {circularidad:.4f}")
-print(f"Excentricidad (e): {excentricidad:.4f}\n")
-
 # -----------------------------------------------------------------------------
-# RECONSTRUCCIÓN SEGURA DE MÁSCARAS GLOBALES (Antes de graficar)
+# RECONSTRUCCIÓN DE MÁSCARAS GLOBALES (Antes de graficar)
 # -----------------------------------------------------------------------------
 h_sub, w_sub = mascara_ws.shape
 mascara_ws_global = np.zeros(roi_gris.shape, dtype=bool)
 mascara_ws_global[y0 : y0 + h_sub, x0 : x0 + w_sub] = mascara_ws
 
-# Obtención segura de marcadores sin alertas de linter
+# Obtención segura de marcadores 
 marcador_ref = locals().get("mascara_marcador", locals().get("marcador_ws", None))
 
 # -----------------------------------------------------------------------------
@@ -1604,6 +1593,13 @@ path_fig_morf = os.path.join(MOD_DIRS["3"], "01_descriptores_morfometricos_frame
 plt.savefig(path_fig_morf, bbox_inches="tight")
 plt.close()
 print("\nIMAGEN 01_descriptores_morfometricos_frame: se muestra la ROI original segmentada con watershed y la ubicacion del centroide\n")
+# Imprimir resultados
+print("DESCRIPTORES MORFOMÉTRICOS EN EL FRAME SEGMENTADO")
+print(f"Área (A): {area:.2f} px")
+print(f"Perímetro (P): {perimetro:.2f} px")
+print(f"Centroide (Xc, Yc): ({xc:.2f}, {yc:.2f}) px")
+print(f"Circularidad (C): {circularidad:.4f}")
+print(f"Excentricidad (e): {excentricidad:.4f}\n")
 # |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
 # 2. Descriptores de Textura de Primer Orden (Canales RGB) ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -1643,15 +1639,15 @@ for i, nombre_c in enumerate(canales_nombres):
 # Tabla resumen
 df_textura_1er = pd.DataFrame(resultados_textura)
 
-print("=>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-print("DESCRIPTORES DE TEXTURA DE 1ER ORDEN (CANALES RGB)")
-print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+print("\nTABLA descriptores_tetura_1er_orden.csv: textura de primer orden\n")
+print("       >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+print("       DESCRIPTORES DE TEXTURA DE 1ER ORDEN (CANALES RGB)")
+print("       <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
 print(df_textura_1er.to_string(index=False))
 
 # Guardado en CSV dentro de la subcarpeta del Módulo 3
 path_csv_textura = os.path.join(MOD_DIRS["3"], "descriptores_textura_1er_orden.csv")
 df_textura_1er.to_csv(path_csv_textura, index=False)
-print(f"\nTabla de textura de 1er orden exportada a: {path_csv_textura}")
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
 # 3. Descriptores de Textura de 2do Orden (GLCM / Haralick en Canales RGB) |||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -1666,10 +1662,6 @@ canales_nombres = ["Rojo (R)", "Verde (G)", "Azul (B)"]
 resultados_glcm = []
 
 fig = plt.figure(figsize=(15, 4))
-
-print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-print("MATRICES DE COOCURRENCIA (GLCM) POR CANAL RGB")
-print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n")
 
 for i, nombre_c in enumerate(canales_nombres):
     canal_cuant = iris_cuant_rgb[:, :, i]
@@ -1714,295 +1706,712 @@ plt.tight_layout()
 path_fig_glcm = os.path.join(MOD_DIRS["3"], "02_matrices_glcm_rgb.png")
 plt.savefig(path_fig_glcm, bbox_inches="tight")
 plt.close()
-print("\nIMAGEN 02_matrices_glcm_rgb: muestra las matrices glcm en los canales R, G y B")
+print("\nIMAGEN 02_matrices_glcm_rgb: muestra las matrices glcm en los canales R, G y B\n")
 
 # Tabla resumen de descriptores de segundo orden
 df_glcm = pd.DataFrame(resultados_glcm)
 
-print("////////////////////////////////////////////")
-print("ATRIBUTOS DE SEGUNDO ORDEN (HARALICK / GLCM)")
-print("////////////////////////////////////////////")
+print("\nTABLA descriptores_textura_2do_orden_glcm.csv: textura de segundo orden para cada canal\n")
+
+print("       ////////////////////////////////////////////")
+print("       ATRIBUTOS DE SEGUNDO ORDEN (HARALICK / GLCM)")
+print("       ////////////////////////////////////////////")
 print(df_glcm.to_string(index=False))
 
 # Guardado en CSV
 path_csv_glcm = os.path.join(MOD_DIRS["3"], "descriptores_textura_2do_orden_glcm.csv")
 df_glcm.to_csv(path_csv_glcm, index=False)
-print(f"\nTabla de textura de 2do orden exportada a: {path_csv_glcm}")
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
+print("\n¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨")
+print("3.2 Procesamiento en Video y Curva Temporal Fisiológica")
+print("------------------------------------------------------------------")
+
+# Anotación del Ground Truth ____________________________________________________________________________________________
+if not os.path.exists(VIDEO_PATH):
+    raise FileNotFoundError(f"No se encontró el archivo de video en: {VIDEO_PATH}")
+
+cap = cv2.VideoCapture(VIDEO_PATH)
+fps = cap.get(cv2.CAP_PROP_FPS)
+total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+duracion_s = total_frames / fps if fps > 0 else 0.0
 
 
+# Coordenadas de la ROI del ojo (extendida con 5 px de margen sobre la elegida en Módulo 0)
+y0_ojo = max(0, y_inicial - 5)
+y1_ojo = min(height, y_final + 5)
+x0_ojo = max(0, x_inicial - 5)
+x1_ojo = min(width, x_final + 5)
 
+# 1. Generación automática equispaciada de 6 keyframes
+n_keyframes = 6
+inicio_f = int(fps * 0.5) if total_frames > fps else 0
+fin_f = int(total_frames - fps * 0.5) if total_frames > fps else total_frames - 1
+frames_objetivo = np.linspace(inicio_f, fin_f, n_keyframes, dtype=int).tolist()
 
+# Extracción de la ROI para cada keyframe y exportación de la grilla de inspección
+cols = 3
+rows = (len(frames_objetivo) + cols - 1) // cols
+fig, axs = plt.subplots(rows, cols, figsize=(18, 5 * rows))
+axs = np.array(axs).reshape(-1)
 
+frames_extraidos = {}
 
-
-
-
-
-
-
-
-
-
-# 4. Input Interactivo de Frames de Validación y Anotación Manual Ground Truth
-val_input_str = input("Ingrese los segundos que seleccione los frames de validación, elegir 2 antes del estímulo, 2 durante y 2 después: ")
-segundos_val = [float(s.strip()) for s in val_input_str.split(",")]
-
-cap_val = cv2.VideoCapture(VIDEO_PATH)
-frames_val_data = []
-
-fig, axs = plt.subplots(2, 3, figsize=(15, 10))
-axs = axs.ravel()
-
-print("\n--- INGRESO DE ANOTACIONES MANUALES PARA FRAMES DE VALIDACIÓN ---")
-print("Examine las coordinadas en la figura o carpetas para ingresar (x_izq, x_der, y_sup, y_inf)")
-
-filas_gt = []
-anotaciones_val = {}
-
-for i, seg in enumerate(segundos_val):
-    idx_f = min(int(seg * fps), total_frames - 1)
-    cap_val.set(cv2.CAP_PROP_POS_FRAMES, idx_f)
-    ret_v, frame_v = cap_val.read()
-    if not ret_v:
+for i, idx_frame in enumerate(frames_objetivo):
+    cap.set(cv2.CAP_PROP_POS_FRAMES, idx_frame)
+    ret, frame = cap.read()
+    if not ret:
         continue
-        
-    frame_v_rgb = cv2.cvtColor(frame_v, cv2.COLOR_BGR2RGB)
-    roi_v = frame_v_rgb[y_inicial:y_final, x_inicial:x_final]
-    
-    # Dibujar grilla para que el usuario pueda visualizar los límites de la pupila
-    ax = axs[i]
-    ax.imshow(roi_v)
-    ax.grid(True, color="white", linewidth=0.5, alpha=0.7)
-    ax.set_title(f"Frame {idx_f} (t = {seg:.2f}s)", fontweight="bold")
-    ax.axis("on")
-    
-    plt.draw()
-    
-    print(f"\n-> Frame {idx_f} (t = {seg:.2f}s):")
-    x1 = float(input("   Ingrese x_izq: "))
-    x2 = float(input("   Ingrese x_der: "))
-    y1 = float(input("   Ingrese y_sup: "))
-    y2 = float(input("   Ingrese y_inf: "))
-    
-    x_min, x_max = min(x1, x2), max(x1, x2)
-    y_min, y_max = min(y1, y2), max(y1, y2)
-    
-    a_semieje = (x_max - x_min) / 2.0
-    b_semieje = (y_max - y_min) / 2.0
-    xc_loc = x_min + a_semieje
-    yc_loc = y_min + b_semieje
-    
-    area_gt = np.pi * a_semieje * b_semieje
-    diam_gt = 2.0 * np.sqrt(a_semieje * b_semieje)
-    
-    anotaciones_val[idx_f] = (x_min, x_max, y_min, y_max)
-    filas_gt.append({
-        "Frame": idx_f,
-        "Tiempo [s]": seg,
-        "Área [px]": area_gt,
-        "Diámetro [px]": diam_gt,
-        "Xc_loc": xc_loc,
-        "Yc_loc": yc_loc
-    })
 
-cap_val.release()
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    roi_ojo = frame_rgb[y0_ojo:y1_ojo, x0_ojo:x1_ojo].copy()
+    tiempo_s = idx_frame / fps if fps > 0 else 0.0
+    frames_extraidos[idx_frame] = (roi_ojo, tiempo_s)
+
+    ax = axs[i]
+    ax.imshow(roi_ojo)
+
+    # Grilla de referencia espacial
+    alto, ancho = roi_ojo.shape[:2]
+    ax.set_xticks(np.arange(0, ancho, 25))
+    ax.set_yticks(np.arange(0, alto, 25))
+    ax.set_xticks(np.arange(0, ancho, 5), minor=True)
+    ax.set_yticks(np.arange(0, alto, 5), minor=True)
+
+    ax.grid(which="major", color="white", linewidth=0.6, alpha=0.7)
+    ax.grid(which="minor", color="white", linewidth=0.2, alpha=0.3)
+
+    ax.set_title(
+        f"Frame {idx_frame} (t = {tiempo_s:.2f}s)",
+        fontweight="bold",
+        fontsize=10,
+    )
+    ax.tick_params(labelsize=7)
+
+for j in range(len(frames_objetivo), len(axs)):
+    axs[j].axis("off")
 
 plt.tight_layout()
-plt.savefig(os.path.join(MOD_DIRS["3"], "01_frames_validacion_grilla.png"))
+path_inspeccion_key = os.path.join(MOD_DIRS["3"], "03_inspeccion_keyframes_video.png")
+plt.savefig(path_inspeccion_key, bbox_inches="tight")
 plt.close()
 
-df_gt = pd.DataFrame(filas_gt)
-df_gt.to_csv(os.path.join(MOD_DIRS["3"], "ground_truth_manual.csv"), index=False)
+print(f"\nIMAGEN 03_inspeccion_keyframes_video: muestra los frames comparativos\n")
 
-print(f"\nGround Truth de validación guardado en: {MOD_DIRS['3']}")
+# 2. Entrada interactiva o salteo de validación
+opcion = input("¿Desea ingresar los límites para la validación Ground Truth? (si/no): ").strip().lower()
 
+if opcion in ["no", "n"]:
+    print("\nValidación omitida por el usuario. Se proseguirá únicamente con el procesamiento automático.")
+    df_gt = None
+else:
+    anotaciones_video = {}
+    print("\nIngrese los límites (x1, x2, y1, y2) observados en 03_inspeccion_keyframes_video.:")
+    for idx_frame in frames_objetivo:
+        tiempo_s = frames_extraidos[idx_frame][1]
+        print(f"\nFrame {idx_frame} (t = {tiempo_s:.2f}s):")
+        try:
+            x1 = int(input("  x1: "))
+            x2 = int(input("  x2: "))
+            y1 = int(input("  y1: "))
+            y2 = int(input("  y2: "))
+        except ValueError:
+            print("  Entrada inválida. Se asigna centro predeterminado.")
+            roi_tmp = frames_extraidos[idx_frame][0]
+            x1, x2 = int(roi_tmp.shape[1] * 0.3), int(roi_tmp.shape[1] * 0.7)
+            y1, y2 = int(roi_tmp.shape[0] * 0.3), int(roi_tmp.shape[0] * 0.7)
+        anotaciones_video[idx_frame] = (x1, x2, y1, y2)
 
+    # 3. Construcción visual y geométrica 
+    fig, axs = plt.subplots(rows, cols, figsize=(18, 5 * rows))
+    axs = np.array(axs).reshape(-1)
 
+    filas_gt = []
 
+    for i, idx_frame in enumerate(frames_objetivo):
+        roi_ojo, tiempo_s = frames_extraidos[idx_frame]
+        roi_ojo = roi_ojo.copy()
 
-# ==============================================================================
-# MÓDULO 4: PROCESAMIENTO EN VIDEO, EVALUACIÓN Y CURVA DINÁMICA
-# ==============================================================================
-print_header("MÓDULO 4: Procesamiento de Video, Métricas de Error y Parámetros Fisiológicos")
+        # Ordenamiento de límites para evitar inconsistencias de dirección
+        x1, x2, y1, y2 = anotaciones_video[idx_frame]
+        x_min, x_max = min(x1, x2), max(x1, x2)
+        y_min, y_max = min(y1, y2), max(y1, y2)
 
-def segmentar_pupila_frame(frame_rgb, cx_prev=None, cy_prev=None, semilado=65):
-    roi_v = frame_rgb[y_inicial:y_final, x_inicial:x_final]
-    canal_rojo = roi_v[:, :, 0]
-    canal_filtrado = cv2.medianBlur(canal_rojo, 5)
-    
+        # Cálculo de semiejes y centroide local en coordenadas de la ROI
+        a = (x_max - x_min) / 2.0  # Semieje horizontal
+        b = (y_max - y_min) / 2.0  # Semieje vertical
+        xc_loc = x_min + a
+        yc_loc = y_min + b
+
+        # Geometría de referencia Ground Truth (GT)
+        area_gt = np.pi * a * b
+        diam_gt = 2.0 * np.sqrt(a * b)
+
+        filas_gt.append({
+            "Frame": idx_frame,
+            "Tiempo [s]": tiempo_s,
+            "Área [px]": area_gt,
+            "Diámetro [px]": diam_gt,
+            "Xc_loc": xc_loc,
+            "Yc_loc": yc_loc,
+        })
+
+        # Dibujo de elipse ajustada (verde) y centroide (rojo) sobre la ROI
+        cv2.ellipse(
+            roi_ojo,
+            (int(xc_loc), int(yc_loc)),
+            (int(a), int(b)),
+            0,
+            0,
+            360,
+            (0, 255, 0),
+            2,
+        )
+        cv2.circle(roi_ojo, (int(xc_loc), int(yc_loc)), 4, (255, 0, 0), -1)
+
+        ax = axs[i]
+        ax.imshow(roi_ojo)
+
+        # Grilla de referencia espacial
+        alto, ancho = roi_ojo.shape[:2]
+        ax.set_xticks(np.arange(0, ancho, 50))
+        ax.set_yticks(np.arange(0, alto, 50))
+        ax.set_xticks(np.arange(0, ancho, 10), minor=True)
+        ax.set_yticks(np.arange(0, alto, 10), minor=True)
+
+        ax.grid(which="major", color="white", linewidth=0.6, alpha=0.7)
+        ax.grid(which="minor", color="white", linewidth=0.2, alpha=0.3)
+
+        ax.set_title(
+            f"Frame {idx_frame} (t = {tiempo_s:.2f}s)\nGT Manual: A = {area_gt:.1f} px"
+            f" | D = {diam_gt:.1f} px",
+            fontweight="bold",
+            fontsize=10,
+        )
+        ax.tick_params(labelsize=7)
+
+    # Apagar ejes vacíos en el subplot
+    for j in range(len(frames_objetivo), len(axs)):
+        axs[j].axis("off")
+
+    plt.tight_layout()
+    path_gt_fig = os.path.join(MOD_DIRS["3"], "04_keyframes_ground_truth.png")
+    plt.savefig(path_gt_fig, bbox_inches="tight")
+    plt.close()
+    print("\nIMAGEN 04_keyframes_ground_truth: se ven las circunferencias ajustadas por el usuario\n")
+
+    # 4. Exportación de la tabla Ground Truth (df_gt)
+    df_gt = pd.DataFrame(filas_gt)
+    path_csv_gt = os.path.join(MOD_DIRS["3"], "ground_truth_keyframes.csv")
+    df_gt.to_csv(path_csv_gt, index=False)
+
+    print("TABLA ground_truth_keyframes.csv: muestra los valores de referencia del área y el diámetro extraidos, que serán comparados con la segmentación automática\n")
+
+    print("---------------------------------------------------")
+    print("TABLA GROUND TRUTH (GT) CONSTRUIDA PARA COMPARACIÓN")
+    print("---------------------------------------------------")
+    print(
+        df_gt[["Frame", "Tiempo [s]", "Área [px]", "Diámetro [px]"]].to_string(
+            index=False
+        )
+    )
+cap.release()
+# ______________________________________________________________________________________________________________________________________________________________________________
+
+# SEGMENTACIÓN DEL VIDEO FRAME A FRAME _________________________________________________________________________________________________________________________________________
+# Definición de límites globales de ROI con holgura
+Y_INICIAL, Y_FINAL = y0_ojo, y1_ojo
+X_INICIAL, X_FINAL = x0_ojo, x1_ojo
+
+# -----------------------------------------------------------------------------
+# 1. Segmentación Robusta Frame por Frame
+# -----------------------------------------------------------------------------
+SEMILADO_SUBROI = 35  # Sub-ventana más compacta (70x70 px) para centrarse en la pupila
+
+def segmentar_pupila_frame(frame_rgb, cx_prev=None, cy_prev=None):
+    roi_rgb = frame_rgb[Y_INICIAL:Y_FINAL, X_INICIAL:X_FINAL]
+
+    # Canal Rojo (Canal 0) + Filtro de Mediana
+    canal_rojo = roi_rgb[:, :, 0]
+    canal_rojo_filtrado = cv2.medianBlur(canal_rojo, 5)
+
     if cx_prev is None or cy_prev is None:
         cy_prev = canal_rojo.shape[0] // 2
         cx_prev = canal_rojo.shape[1] // 2
-        
-    y0 = max(int(cy_prev) - semilado, 0)
-    y1 = min(int(cy_prev) + semilado, canal_rojo.shape[0])
-    x0 = max(int(cx_prev) - semilado, 0)
-    x1 = min(int(cx_prev) + semilado, canal_rojo.shape[1])
-    
-    sub_rojo = canal_filtrado[y0:y1, x0:x1]
-    c_local = (int(cx_prev - x0), int(cy_prev - y0))
-    
-    u1, b1 = cv2.threshold(sub_rojo, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-    
+
+    # Sub-ROI centrada alrededor del centroide previo
+    y0 = max(cy_prev - SEMILADO_SUBROI, 0)
+    y1 = min(cy_prev + SEMILADO_SUBROI, canal_rojo.shape[0])
+    x0 = max(cx_prev - SEMILADO_SUBROI, 0)
+    x1 = min(cx_prev + SEMILADO_SUBROI, canal_rojo.shape[1])
+
+    sub_rojo = canal_rojo_filtrado[y0:y1, x0:x1]
+    c_local = (cx_prev - x0, cy_prev - y0)
+
+    # 1. Otsu Nivel 1: Separa tejido claro (esclerótica/piel) del tejido oscuro (iris + pupila)
+    u_global, _ = cv2.threshold(sub_rojo, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    pixeles_oscuros = sub_rojo[sub_rojo < u_global]
+
+    # 2. Otsu Nivel 2: Separa Pupila (muy oscura) de Iris (gris intermedio)
+    if len(pixeles_oscuros) > 10:
+        u_pupila, _ = cv2.threshold(pixeles_oscuros, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    else:
+        u_pupila = u_global * 0.6  # Respaldo proporcional si hay pocos píxeles
+
+    # Máscara binaria exclusiva de pupila
+    b1 = (sub_rojo < u_pupila).astype(np.uint8)
+
+    # 3. Marcadores de Watershed restringidos
     marc = np.zeros(sub_rojo.shape, dtype=np.int32)
-    marc[(sub_rojo > u1) & ~(cv2.dilate(b1, np.ones((7, 7))) > 0)] = 1
-    marc[cv2.erode(b1, np.ones((5, 5))) > 0] = 2
-    
+    # Fondo (1): todo lo que sea más claro que el umbral de pupila y fuera de un margen dilatado
+    marc[(sub_rojo >= u_pupila) & ~(cv2.dilate(b1, np.ones((5, 5))) > 0)] = 1
+    # Núcleo de Pupila (2): máscara binarizada erosionada
+    marc[cv2.erode(b1, np.ones((3, 3))) > 0] = 2
+
     grad = sobel(sub_rojo.astype(float) / 255.0)
     et = watershed(grad, marc)
     ws_raw = (et == 2).astype(np.uint8)
-    
-    ws_cierre = cv2.morphologyEx(ws_raw, cv2.MORPH_CLOSE, ee7)
-    ws_apertura = cv2.morphologyEx(ws_cierre, cv2.MORPH_OPEN, ee5)
+
+    # Posprocesamiento morfológico (Cierre + Apertura + Relleno de huecos)
+    ee3 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    ee5 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+
+    ws_cierre = cv2.morphologyEx(ws_raw, cv2.MORPH_CLOSE, ee5)
+    ws_apertura = cv2.morphologyEx(ws_cierre, cv2.MORPH_OPEN, ee3)
     ws_posproc = ndi.binary_fill_holes(ws_apertura)
-    
-    contornos, _ = cv2.findContours(ws_posproc.astype(np.uint8) * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Extracción de contornos
+    contornos, _ = cv2.findContours(
+        (ws_posproc.astype(np.uint8)) * 255,
+        cv2.RETR_EXTERNAL,
+        cv2.CHAIN_APPROX_SIMPLE,
+    )
+
     mask_pupila = np.zeros(ws_posproc.shape, dtype=np.uint8)
-    
-    xc_loc, yc_loc = c_local[0], c_local[1]
-    
+    xc_loc, yc_loc = c_local
+
     if len(contornos) > 0:
         cnt_pupila = max(contornos, key=cv2.contourArea)
-        if cv2.contourArea(cnt_pupila) > 100:
+
+        if cv2.contourArea(cnt_pupila) > 50:  # Umbral de área mínima ajustado para pupila chica
             cv2.drawContours(mask_pupila, [cnt_pupila], -1, 255, -1)
+
             M = cv2.moments(cnt_pupila)
             if M["m00"] != 0:
                 xc_cand = M["m10"] / M["m00"]
                 yc_cand = M["m01"] / M["m00"]
+
+                # Limitar desplazamiento del centroide (máx 4 px por cuadro)
                 dx = np.clip(xc_cand - c_local[0], -4.0, 4.0)
                 dy = np.clip(yc_cand - c_local[1], -4.0, 4.0)
+
                 xc_loc = c_local[0] + dx
                 yc_loc = c_local[1] + dy
 
     area = float(np.sum(mask_pupila > 0))
     diametro = 2.0 * np.sqrt(area / np.pi) if area > 0 else 0.0
-    
+
     xc_global = xc_loc + x0
     yc_global = yc_loc + y0
-    
-    return area, diametro, (xc_global, yc_global), mask_pupila, (x0, x1, y0, y1)
+
+    return (
+        area,
+        diametro,
+        (xc_global, yc_global),
+        mask_pupila,
+        (x0, x1, y0, y1),
+    )
+
+# -----------------------------------------------------------------------------
+# 2. Procesamiento Completo de Video
+# -----------------------------------------------------------------------------
+def procesar_video_pupilometria(path_video_input):
+    cap = cv2.VideoCapture(path_video_input)
+
+    if not cap.isOpened():
+        print(f"Error al abrir el video: {path_video_input}")
+        return None, 0.0
+
+    fps_v = cap.get(cv2.CAP_PROP_FPS)
+    ancho_v = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    alto_v = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    nombre_base = os.path.basename(path_video_input)
+    out_path = os.path.join(MOD_DIRS["3"], f"anotado_{nombre_base}")
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    writer = cv2.VideoWriter(out_path, fourcc, fps_v, (ancho_v, alto_v))
+
+    registros = []
+    cx_p, cy_p = None, None
+    n_frame = 0
+
+    while cap.isOpened():
+        ret, frame_bgr = cap.read()
+        if not ret:
+            break
+
+        frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+        tiempo_seg = n_frame / fps_v if fps_v > 0 else 0.0
+
+        # Segmentación frame por frame
+        area, diam, (xc_roi, yc_roi), mask_sub, (x0, x1, y0, y1) = (
+            segmentar_pupila_frame(frame_rgb, cx_p, cy_p)
+        )
+
+        cx_p, cy_p = int(xc_roi), int(yc_roi)
+
+        xc_frame = int(xc_roi + X_INICIAL)
+        yc_frame = int(yc_roi + Y_INICIAL)
+
+        registros.append({
+            "Frame": n_frame,
+            "Tiempo [s]": tiempo_seg,
+            "Área [px]": area,
+            "Diámetro [px]": diam,
+            "Xc_frame [px]": xc_frame,
+            "Yc_frame [px]": yc_frame,
+        })
+
+        # Visualización sobre el frame exportado
+        frame_vis = frame_bgr.copy()
+
+        cnts_sub, _ = cv2.findContours(
+            (mask_sub.astype(np.uint8)) * 255,
+            cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_SIMPLE,
+        )
+        if len(cnts_sub) > 0:
+            cnt_max = max(cnts_sub, key=cv2.contourArea)
+            cnt_global = cnt_max + np.array([X_INICIAL + x0, Y_INICIAL + y0])
+            cv2.drawContours(frame_vis, [cnt_global], -1, (0, 255, 128), 1, lineType=cv2.LINE_AA)
+
+        cv2.circle(frame_vis, (xc_frame, yc_frame), 3, (0, 0, 255), -1, lineType=cv2.LINE_AA)
+
+        txt_l1 = f"t = {tiempo_seg:.2f}s | D = {diam:.1f}px"
+        cv2.putText(
+            frame_vis,
+            txt_l1,
+            (40, 70),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.2,
+            (0, 0, 0),
+            6,
+            cv2.LINE_AA,
+        )
+        cv2.putText(
+            frame_vis,
+            txt_l1,
+            (40, 70),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.2,
+            (220, 245, 255),
+            2,
+            cv2.LINE_AA,
+        )
+
+        writer.write(frame_vis)
+        n_frame += 1
+
+    cap.release()
+    writer.release()
+
+    df_resultados = pd.DataFrame(registros)
+    print(
+        f"\nVideo {nombre_base} procesado exitosamente ({n_frame} frames guardados)."
+    )
+    return df_resultados, fps_v
 
 
+# -----------------------------------------------------------------------------
+# 3. Evaluación de Error 
+# -----------------------------------------------------------------------------
+def evaluar_metricas_error(df_auto, df_gt):
+    if df_gt is None or df_gt.empty:
+        print("\nGround Truth no disponible. Se omite la evaluación de error cuantitativa.")
+        return None, None
 
-# Loop de Procesamiento de Video
-cap = cv2.VideoCapture(VIDEO_PATH)
-out_video_path = os.path.join(MOD_DIRS["4"], "video_anotado_salida.mp4")
-fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-writer = cv2.VideoWriter(out_video_path, fourcc, fps, (width, height))
+    df_merge = pd.merge(
+        df_gt, df_auto, on="Frame", suffixes=("_GT", "_AUTO")
+    )
 
-registros = []
-cx_p, cy_p = None, None
-n_frame = 0
+    err_area = df_merge["Área [px]_AUTO"] - df_merge["Área [px]_GT"]
+    mae_area = float(np.mean(np.abs(err_area)))
+    rmse_area = float(np.sqrt(np.mean(err_area**2)))
 
-print("Procesando cuadros del video...")
-while cap.isOpened():
-    ret, frame_bgr = cap.read()
-    if not ret:
-        break
-        
-    frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-    t_seg = n_frame / fps
-    
-    area, diam, (xc_roi, yc_roi), mask_sub, (x0, x1, y0, y1) = segmentar_pupila_frame(frame_rgb, cx_p, cy_p)
-    cx_p, cy_p = int(xc_roi), int(yc_roi)
-    
-    xc_frame = int(xc_roi + x_inicial)
-    yc_frame = int(yc_roi + y_inicial)
-    
-    registros.append({
-        "Frame": n_frame,
-        "Tiempo [s]": t_seg,
-        "Área [px]": area,
-        "Diámetro [px]": diam,
-        "Xc_frame [px]": xc_frame,
-        "Yc_frame [px]": yc_frame
-    })
-    
-    frame_vis = frame_bgr.copy()
-    cv2.circle(frame_vis, (xc_frame, yc_frame), 4, (0, 0, 255), -1)
-    txt = f"t = {t_seg:.2f}s | D = {diam:.1f}px"
-    cv2.putText(frame_vis, txt, (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2, cv2.LINE_AA)
-    
-    writer.write(frame_vis)
-    n_frame += 1
+    err_diam = df_merge["Diámetro [px]_AUTO"] - df_merge["Diámetro [px]_GT"]
+    mae_diam = float(np.mean(np.abs(err_diam)))
+    rmse_diam = float(np.sqrt(np.mean(err_diam**2)))
 
-cap.release()
-writer.release()
+    print("\n---------------------------------------------")
+    print("EVALUACIÓN DE ERROR AUTOMÁTICO VS MANUAL (GT)")
+    print("---------------------------------------------")
+    print(f"MAE  Área    : {mae_area:.2f} px")
+    print(f"RMSE Área    : {rmse_area:.2f} px")
+    print(f"MAE  Diámetro: {mae_diam:.2f} px")
+    print(f"RMSE Diámetro: {rmse_diam:.2f} px\n")
 
-df_auto = pd.DataFrame(registros)
+    return df_merge, {
+        "MAE_Area": mae_area,
+        "RMSE_Area": rmse_area,
+        "MAE_Diam": mae_diam,
+        "RMSE_Diam": rmse_diam,
+    }
 
-# Suavizado de la Señal por Mediana Móvil
-df_auto["Diámetro_Filtrado [px]"] = df_auto["Diámetro [px]"].rolling(window=5, center=True, min_periods=1).median()
-df_auto["Área_Filtrada [px]"] = np.pi * (df_auto["Diámetro_Filtrado [px]"] / 2.0) ** 2
+# -----------------------------------------------------------------------------
+# 4. Ejecución Principal y Filtrado
+# -----------------------------------------------------------------------------
+df_auto, fps_video = procesar_video_pupilometria(VIDEO_PATH)
 
-df_auto.to_csv(os.path.join(MOD_DIRS["4"], "curva_pupilar_completa.csv"), index=False)
+# Exportación del CSV de resultados
+path_csv_auto = os.path.join(MOD_DIRS["3"], "seguimiento_temporal_pupilometria.csv")
+df_auto.to_csv(path_csv_auto, index=False)
 
-# Evaluación de Errores Métricos (Auto vs Manual GT)
-df_eval = pd.merge(df_gt, df_auto, on="Frame", suffixes=("_GT", "_AUTO"))
-err_diam = df_eval["Diámetro [px]_AUTO"] - df_eval["Diámetro [px]_GT"]
-mae_diam = np.mean(np.abs(err_diam))
-rmse_diam = np.sqrt(np.mean(err_diam ** 2))
+# Filtrado de señal (Mediana móvil de 5 muestras para mitigar artefactos)
+df_auto["Diámetro_Filtrado [px]"] = (
+    df_auto["Diámetro [px]"]
+    .rolling(window=5, center=True, min_periods=1)
+    .median()
+)
+df_auto["Área_Filtrada [px]"] = (
+    np.pi * (df_auto["Diámetro_Filtrado [px]"] / 2.0) ** 2
+)
 
-err_area = df_eval["Área [px]_AUTO"] - df_eval["Área [px]_GT"]
-mae_area = np.mean(np.abs(err_area))
-rmse_area = np.sqrt(np.mean(err_area ** 2))
+# Evaluación cuantitativa si Ground Truth existe
+if "df_gt" in locals() and df_gt is not None and not df_gt.empty:
+    df_evaluacion, metricas_error = evaluar_metricas_error(df_auto, df_gt)
+else:
+    df_evaluacion, metricas_error = None, None
 
-print("\nEVALUACIÓN DE MÉTRICAS DE ERROR (AUTOMÁTICO VS GROUND TRUTH MANUAL):")
-print(f"  • MAE Diámetro  : {mae_diam:.2f} px")
-print(f"  • RMSE Diámetro : {rmse_diam:.2f} px")
-print(f"  • MAE Área      : {mae_area:.2f} px")
-print(f"  • RMSE Área     : {rmse_area:.2f} px")
 
-# Gráfico 1: Curva de Dinámica Pupilar D(t) con Ground Truth Superpuesto
+# -----------------------------------------------------------------------------
+# 5. Gráficos de Resultados
+# -----------------------------------------------------------------------------
+# Curva de Diámetro
 plt.figure(figsize=(12, 5))
-plt.plot(df_auto["Tiempo [s]"], df_auto["Diámetro [px]"], color="gray", alpha=0.4, linewidth=1.0, label="Medición cruda")
-plt.plot(df_auto["Tiempo [s]"], df_auto["Diámetro_Filtrado [px]"], color="red", linewidth=2.0, label="Seguimiento automático (Filtrado Mediana)")
-plt.scatter(df_gt["Tiempo [s]"], df_gt["Diámetro [px]"], color="lime", edgecolors="black", s=70, zorder=5, label="Mediciones manuales (Ground Truth)")
+plt.plot(
+    df_auto["Tiempo [s]"],
+    df_auto["Diámetro [px]"],
+    color="gray",
+    alpha=0.4,
+    linewidth=1.0,
+    label="Medición cruda",
+)
+plt.plot(
+    df_auto["Tiempo [s]"],
+    df_auto["Diámetro_Filtrado [px]"],
+    color="red",
+    linewidth=2.0,
+    label="Seguimiento automático (Filtrado Mediana)",
+)
 
-plt.title("Curva de Respuesta Dinámica Pupilar D(t)", fontweight="bold")
+if "df_gt" in locals() and df_gt is not None and not df_gt.empty:
+    plt.scatter(
+        df_gt["Tiempo [s]"],
+        df_gt["Diámetro [px]"],
+        color="lime",
+        edgecolors="black",
+        s=70,
+        zorder=5,
+        label="Mediciones manuales (Ground Truth)",
+    )
+
+plt.title(
+    f"Curva de Respuesta Dinámica Pupilar - {os.path.basename(VIDEO_PATH)}", fontweight="bold"
+)
 plt.xlabel("Tiempo [s]")
 plt.ylabel("Diámetro equivalente [px]")
 plt.grid(True, linestyle="--", alpha=0.5)
 plt.legend(loc="lower right")
 plt.tight_layout()
-plt.savefig(os.path.join(MOD_DIRS["4"], "01_curva_dinamica_pupilar.png"))
-plt.close()
 
-# Gráfico 2: Trayectoria del Centroide
+path_curva_din = os.path.join(MOD_DIRS["3"], "05_curva_dinamica_pupilar.png")
+plt.savefig(path_curva_din, bbox_inches="tight")
+plt.close()
+print("\nFIGURA 05_curva_dinamica_pupilar: muestra el gráfico del diámetro en el tiempo\n")
+print("\nTABLA seguimiento_temporal_pupilometria.csv: contiene los valores del diámetro y el área en el tiempo\n")
+
+# Trayectoria Real del Centroide en el Marco del Video Completo
 plt.figure(figsize=(12, 4))
-plt.plot(df_auto["Tiempo [s]"], df_auto["Xc_frame [px]"], label="Centroide Xc", color="cyan")
-plt.plot(df_auto["Tiempo [s]"], df_auto["Yc_frame [px]"], label="Centroide Yc", color="magenta")
-plt.title("Estabilidad y Trayectoria del Centroide Pupilar", fontweight="bold")
+plt.plot(
+    df_auto["Tiempo [s]"],
+    df_auto["Xc_frame [px]"],
+    label="Centroide Xc (Video Global)",
+    color="cyan",
+)
+plt.plot(
+    df_auto["Tiempo [s]"],
+    df_auto["Yc_frame [px]"],
+    label="Centroide Yc (Video Global)",
+    color="magenta",
+)
+plt.title(
+    "Estabilidad y Trayectoria del Centroide Pupilar (Coordenadas de Escena)",
+    fontweight="bold",
+)
 plt.xlabel("Tiempo [s]")
 plt.ylabel("Coordenada Real [px]")
 plt.grid(True, linestyle="--", alpha=0.5)
 plt.legend(loc="upper right")
 plt.tight_layout()
-plt.savefig(os.path.join(MOD_DIRS["4"], "02_trayectoria_centroide.png"))
+
+path_tray_cent = os.path.join(MOD_DIRS["3"], "06_trayectoria_centroide.png")
+plt.savefig(path_tray_cent, bbox_inches="tight")
 plt.close()
+print("\nIMAGEN 06_trayectoria_centroide: se ve el movimiento del centroide en x e y\n")
 
-# Extraer Parámetros Fisiológicos
-t_estimulo = segundos_val[2] if len(segundos_val) >= 3 else 9.0
+# -----------------------------------------------------------------------------
+# 6. Extracción y Exportación de Parámetros Fisiológicos
+# -----------------------------------------------------------------------------
+t_max_v = df_auto["Tiempo [s]"].max()
+t_flash = 9.0 if t_max_v >= 9.0 else (t_max_v * 0.5)
 
-mask_basal = (df_auto["Tiempo [s]"] >= 0.0) & (df_auto["Tiempo [s]"] <= t_estimulo)
-d_basal = df_auto.loc[mask_basal, "Diámetro_Filtrado [px]"].mean()
+# Estado Basal (Promedio antes del estímulo)
+mask_basal = (df_auto["Tiempo [s]"] >= (t_flash * 0.1)) & (df_auto["Tiempo [s]"] <= t_flash)
+if not mask_basal.any():
+    mask_basal = df_auto["Tiempo [s]"] <= t_flash
 
-mask_resp = df_auto["Tiempo [s]"] >= t_estimulo
+d_basal = float(df_auto.loc[mask_basal, "Diámetro_Filtrado [px]"].mean())
+a_basal = float(df_auto.loc[mask_basal, "Área_Filtrada [px]"].mean())
+
+# Respuesta Mínima (Ventana de constricción post-estímulo)
+mask_resp = (df_auto["Tiempo [s]"] >= t_flash) & (df_auto["Tiempo [s]"] <= min(t_flash + 4.0, t_max_v))
+if not mask_resp.any():
+    mask_resp = df_auto["Tiempo [s]"] >= t_flash
+
 idx_min = df_auto.loc[mask_resp, "Diámetro_Filtrado [px]"].idxmin()
 
-d_min = df_auto.loc[idx_min, "Diámetro_Filtrado [px]"]
-t_min = df_auto.loc[idx_min, "Tiempo [s]"]
+d_min = float(df_auto.loc[idx_min, "Diámetro_Filtrado [px]"])
+a_min = float(df_auto.loc[idx_min, "Área_Filtrada [px]"])
+t_min = float(df_auto.loc[idx_min, "Tiempo [s]"])
 
+# Inicio de la constricción
+delta_caida = 1.0 if d_basal < 10 else 2.0
+mask_caida = (df_auto["Tiempo [s]"] >= t_flash) & (
+    df_auto["Diámetro_Filtrado [px]"] < (d_basal - delta_caida)
+)
+t_inicio_const = (
+    float(df_auto.loc[mask_caida, "Tiempo [s]"].iloc[0])
+    if mask_caida.any()
+    else t_flash + 0.2
+)
+
+# Cálculos dinámicos
+latencia = t_inicio_const - t_flash
 amplitud_diam = d_basal - d_min
-t_latencia = max(0.0, t_min - t_estimulo)
-v_constriccion = amplitud_diam / t_latencia if t_latencia > 0 else 0.0
+amplitud_area_pct = ((a_basal - a_min) / a_basal) * 100.0 if a_basal > 0 else 0.0
+dt_const = t_min - t_inicio_const
+v_constriccion = (amplitud_diam / dt_const) if dt_const > 0 else 0.0
 
-print("\nPARÁMETROS FISIOLÓGICOS EXTRAÍDOS DE LA CURVA:")
-print(f"  • Diámetro Basal (D0)          : {d_basal:.2f} px")
-print(f"  • Diámetro Mínimo (D_min)     : {d_min:.2f} px")
-print(f"  • Amplitud de Constricción (ΔD) : {amplitud_diam:.2f} px")
-print(f"  • Velocidad de Constricción    : {v_constriccion:.2f} px/s")
+# Redilatación
+mask_redil = (df_auto["Tiempo [s]"] > t_min) & (
+    df_auto["Tiempo [s]"] <= min(t_min + 1.0, t_max_v)
+)
+if mask_redil.any():
+    d_post = float(df_auto.loc[mask_redil, "Diámetro_Filtrado [px]"].iloc[-1])
+    dt_redil = float(df_auto.loc[mask_redil, "Tiempo [s]"].iloc[-1] - t_min)
+    v_redilatacion = ((d_post - d_min) / dt_redil) if dt_redil > 0 else 0.0
+else:
+    v_redilatacion = 0.0
 
-print_header("EJECUCIÓN DEL PIPELINE COMPLETADA EXITOSAMENTE")
+# Construcción de la tabla resumen y exportación a CSV
+datos_fisiologicos = [{
+    "Diámetro Basal [px]": round(d_basal, 2),
+    "Diámetro Mínimo [px]": round(d_min, 2),
+    "Tiempo Latencia [s]": round(latencia, 2),
+    "Amplitud Resistencia (D) [px]": round(amplitud_diam, 2),
+    "Amplitud Área [%]": round(amplitud_area_pct, 1),
+    "Velocidad Constricción [px/s]": round(v_constriccion, 2),
+    "Velocidad Redilatación [px/s]": round(v_redilatacion, 2)
+}]
+
+df_fisiologico = pd.DataFrame(datos_fisiologicos)
+path_csv_fisio = os.path.join(MOD_DIRS["3"], "parametros_fisiologicos.csv")
+df_fisiologico.to_csv(path_csv_fisio, index=False)
+
+
+# -----------------------------------------------------------------------------
+# 6. Extracción y Exportación de Parámetros Fisiológicos
+# -----------------------------------------------------------------------------
+t_max_v = df_auto["Tiempo [s]"].max()
+t_flash = 9.0 if t_max_v >= 9.0 else (t_max_v * 0.5)
+
+# Estado Basal (Promedio antes del estímulo)
+mask_basal = (df_auto["Tiempo [s]"] >= (t_flash * 0.1)) & (df_auto["Tiempo [s]"] <= t_flash)
+if not mask_basal.any():
+    mask_basal = df_auto["Tiempo [s]"] <= t_flash
+
+d_basal = float(df_auto.loc[mask_basal, "Diámetro_Filtrado [px]"].mean())
+a_basal = float(df_auto.loc[mask_basal, "Área_Filtrada [px]"].mean())
+
+# Respuesta Mínima (Ventana de constricción post-estímulo)
+mask_resp = (df_auto["Tiempo [s]"] >= t_flash) & (df_auto["Tiempo [s]"] <= min(t_flash + 4.0, t_max_v))
+if not mask_resp.any():
+    mask_resp = df_auto["Tiempo [s]"] >= t_flash
+
+idx_min = df_auto.loc[mask_resp, "Diámetro_Filtrado [px]"].idxmin()
+
+d_min = float(df_auto.loc[idx_min, "Diámetro_Filtrado [px]"])
+a_min = float(df_auto.loc[idx_min, "Área_Filtrada [px]"])
+t_min = float(df_auto.loc[idx_min, "Tiempo [s]"])
+
+# Inicio de la constricción
+delta_caida = 1.0 if d_basal < 10 else 2.0
+mask_caida = (df_auto["Tiempo [s]"] >= t_flash) & (
+    df_auto["Diámetro_Filtrado [px]"] < (d_basal - delta_caida)
+)
+t_inicio_const = (
+    float(df_auto.loc[mask_caida, "Tiempo [s]"].iloc[0])
+    if mask_caida.any()
+    else t_flash + 0.2
+)
+
+# Cálculos dinámicos
+latencia = t_inicio_const - t_flash
+amplitud_diam = d_basal - d_min
+amplitud_area_pct = ((a_basal - a_min) / a_basal) * 100.0 if a_basal > 0 else 0.0
+dt_const = t_min - t_inicio_const
+v_constriccion = (amplitud_diam / dt_const) if dt_const > 0 else 0.0
+
+# Redilatación
+mask_redil = (df_auto["Tiempo [s]"] > t_min) & (
+    df_auto["Tiempo [s]"] <= min(t_min + 1.0, t_max_v)
+)
+if mask_redil.any():
+    d_post = float(df_auto.loc[mask_redil, "Diámetro_Filtrado [px]"].iloc[-1])
+    dt_redil = float(df_auto.loc[mask_redil, "Tiempo [s]"].iloc[-1] - t_min)
+    v_redilatacion = ((d_post - d_min) / dt_redil) if dt_redil > 0 else 0.0
+else:
+    v_redilatacion = 0.0
+
+# 1. Diccionario estructurado
+datos_fisiologicos = {
+    "Diámetro Basal [px]": round(d_basal, 2),
+    "Diámetro Mínimo [px]": round(d_min, 2),
+    "Tiempo Latencia [s]": round(latencia, 2),
+    "Amplitud Respuesta (D) [px]": round(amplitud_diam, 2),
+    "Amplitud Área [%]": round(amplitud_area_pct, 1),
+    "Velocidad Constricción [px/s]": round(v_constriccion, 2),
+    "Velocidad Redilatación [px/s]": round(v_redilatacion, 2),
+}
+
+# 2. Exportación normal a CSV (formato dataset de 1 fila)
+df_fisiologico = pd.DataFrame([datos_fisiologicos])
+path_csv_fisio = os.path.join(MOD_DIRS["3"], "parametros_fisiologicos.csv")
+df_fisiologico.to_csv(path_csv_fisio, index=False)
+
+# 3. DataFrame traspuesto (vertical) para impresión prolija en consola
+df_fisio_transp = pd.DataFrame(
+    list(datos_fisiologicos.items()), 
+    columns=["Parámetro Fisiológico", "Valor"]
+)
+print(f"\nTABLA parametros_fisiologicos.csv: se ven los parámetros extraídos de la curva\n")
+print("//////////////////////////////////////////////")
+print(" PARÁMETROS FISIOLÓGICOS EXTRAÍDOS DE LA CURVA")
+print("//////////////////////////////////////////////")
+print(df_fisiologico.to_string(index=False))
+# _______________________________________________________________________________________________________________________________________________________________
+
+
+
