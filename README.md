@@ -14,6 +14,7 @@ Script en Python que procesa un video del ojo para segmentar la pupila, extraer 
 4. [Workflow del pipeline](#4-workflow-del-pipeline)
 5. [Entradas por terminal (inputs)](#5-entradas-por-terminal-inputs)
 6. [Resultados generados](#6-resultados-generados)
+7. [Instante del estímulo (flash)](#7-instante-del-estímulo-flash).
 ---
 
 ## 1. Requisitos e instalación
@@ -157,8 +158,7 @@ No requiere entradas. Sobre la ROI del frame representativo:
 5. Suaviza el diámetro con una mediana móvil de 5 muestras.
 6. Si hay ground truth, compara automático vs. manual (MAE y RMSE de área y diámetro).
 7. Grafica la curva D(t) y la trayectoria del centroide.
-8. Extrae los parámetros fisiológicos de la curva (ver [sección 7](#instante-del-estímulo)).
-
+8. Extrae los parámetros fisiológicos característicos (ver Sección 7).
 ---
 
 ## 5. Entradas por terminal (inputs)
@@ -326,4 +326,39 @@ Todo queda en `resultados_pipeline/`, en la subcarpeta del módulo correspondien
 - Tabla de parámetros fisiológicos.
 
 Cada ejecución **sobrescribe** los resultados anteriores. Para conservarlos, renombrar o mover `resultados_pipeline/` antes de volver a correr el script.
+
+## 7. Instante del estímulo (flash)
+
+El instante en que se aplica el flash **no se pide por terminal**: está fijo en el código del Módulo 3 (sección 3.2, "Extracción y Exportación de Parámetros Fisiológicos"):
+
+```python
+t_flash = 9.0 if t_max_v >= 9.0 else (t_max_v * 0.5)
+```
+
+Es decir, el script asume que el estímulo ocurre en **t = 9 s**, o en la mitad del video si este dura menos de 9 s. Ese valor corresponde al video original.
+
+### Para qué se usa
+
+Todos los parámetros fisiológicos se calculan a partir de `t_flash`:
+
+| Parámetro | Cómo depende de `t_flash` |
+|---|---|
+| Diámetro basal | Promedio del diámetro entre `0.1 · t_flash` y `t_flash` |
+| Diámetro mínimo | Mínimo en la ventana `[t_flash, t_flash + 4 s]` |
+| Latencia | Tiempo entre `t_flash` y el inicio de la constricción |
+| Amplitud y velocidad de constricción | Se calculan a partir del basal y del mínimo |
+| Velocidad de redilatación | Se calcula en el segundo posterior al mínimo |
+
+Si `t_flash` no coincide con el estímulo real, la ventana basal incluye parte de la respuesta (o la ventana de respuesta empieza antes del flash), y **todos los parámetros fisiológicos quedan mal**, aunque la segmentación y la curva D(t) estén bien.
+
+### Qué hay que cambiar
+
+1. Identificar en qué segundo se produce el flash en el video nuevo. Se puede ver reproduciendo el video, o corriendo el script una vez y mirando en `05_curva_dinamica_pupilar.png` dónde empieza la caída del diámetro.
+2. Reemplazar `9.0` por ese instante **en las dos apariciones** de la línea `t_flash = ...` (el bloque de parámetros fisiológicos está repetido en el script). Por ejemplo, para un flash en t = 6.5 s:
+
+   ```python
+   t_flash = 6.5
+   ```
+
+3. Volver a ejecutar el script.
 
