@@ -45,8 +45,11 @@ proyecto/
 ├── Guía práctica de procesamiento de Imágenes_Grupo 7.ipynb   # resolución de la guía
 ├── requirements.txt
 ├── README.md
-├── videos/
+├── Videos/
+|   └── video_dilatacion_1.mp4
 │   └── video_dilatacion_2.mp4                          # video de entrada
+|   └── video_contraccion_1.mp4
+|   └── video_contraccion_2.mp4
 └── resultados_pipeline/                                # se crea automáticamente
     ├── Modulo_0/
     ├── Modulo_1/
@@ -95,10 +98,12 @@ El script se ejecuta de principio a fin en un solo proceso, pero es **interactiv
 
 ```
  video ──► MÓDULO 0 ──► MÓDULO 1 ──► MÓDULO 2 ──► MÓDULO 3 ──► resultados
-            │                          │            │
-            ├─ [Input 1] segundo        │            ├─ [Input 4] ¿validar GT? (si/no)
-            └─ [Input 2] límites ROI    │            └─ [Input 5] límites pupila × 6 keyframes
-                                        └─ [Input 3] límites pupila × 3 frames
+            │                           │            │
+            ├─ [Input 1] segundo        │            ├─ [Input 5] ¿validar GT? (si/no)
+            └─ [Input 2] límites ROI    │            ├─ [Input 6] límites pupila × 6 keyframes
+                                        |            └─ [Input 7] t_estimulo para param. fisiológicos
+                                        ├─ [Input 3] ¿validar métodos de seg? (si/no)
+                                        └─ [Input 4] límites pupila × 3 frames
 ```
 
 ### Módulo 0 — Inspección inicial y ROI
@@ -130,8 +135,9 @@ No requiere entradas. Sobre la ROI del frame representativo:
 3. Compara los métodos y aplica morfología matemática (erosión, dilatación, apertura, cierre y la combinación propuesta) sobre la mejor máscara.
 4. Esqueletización (eje medio y contorno pupilar).
 5. **Validación multiframe:** extrae los frames en t + 0.5 s, t + 1.0 s y t + 1.5 s y guarda una vista ampliada con grilla (`09_inspeccion_anotacion_manual.png`).
-6. **[Input 3]** Pide los límites de la pupila en esos 3 frames.
-7. Construye una elipse de referencia con cada anotación y calcula Dice, Jaccard y error de área para cada método. Guarda el CSV y la superposición de contornos.
+6. **[Input 3]** Pregunta si se quiere hacer la validación métricas manuales.
+7. **[Input 4]** Pide los límites de la pupila en esos 3 frames.
+8. Construye una elipse de referencia con cada anotación y calcula Dice, Jaccard y error de área para cada método. Guarda el CSV y la superposición de contornos.
 
 ### Módulo 3 — Características, textura y dinámica temporal
 
@@ -145,8 +151,8 @@ No requiere entradas. Sobre la ROI del frame representativo:
 **3.2 Video completo**
 
 1. Selecciona automáticamente **6 keyframes equiespaciados** entre 0.5 s y el final del video menos 0.5 s, y los guarda con grilla (`03_inspeccion_keyframes_video.png`).
-2. **[Input 4]** Pregunta si se quiere hacer la validación con ground truth manual.
-3. **[Input 5]** Si la respuesta es sí, pide los límites de la pupila en los 6 keyframes y construye la tabla de ground truth.
+2. **[Input 5]** Pregunta si se quiere hacer la validación con ground truth manual.
+3. **[Input 6]** Si la respuesta es sí, pide los límites de la pupila en los 6 keyframes y construye la tabla de ground truth.
 4. Segmenta la pupila **frame por frame** en todo el video, usando el centro del frame anterior para seguirla, y genera un video anotado.
 5. Suaviza el diámetro con una mediana móvil de 5 muestras.
 6. Si hay ground truth, compara automático vs. manual (MAE y RMSE de área y diámetro).

@@ -1,9 +1,11 @@
 import os
 import cv2
+import heapq
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.ndimage as ndi
+from collections import Counter
 from scipy.stats import skew
 from skimage.filters import sobel, gaussian, roberts, prewitt
 from skimage.segmentation import active_contour, watershed
@@ -13,15 +15,13 @@ from skimage.feature import graycomatrix, graycoprops
 from sklearn.cluster import KMeans
 from skimage.metrics import peak_signal_noise_ratio as psnr
 from skimage.metrics import structural_similarity as ssim
-from scipy import ndimage as ndi
 
 # ---------------------------------------
 # CONFIGURACIÓN GENERAL Y RUTAS DE SALIDA
 # ---------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-VIDEO_PATH = os.path.join(BASE_DIR, "videos", "video_dilatacion_2.mp4") # MODIFICAR CON EL NOMBRE DEL VIDEO
+VIDEO_PATH = os.path.join(BASE_DIR,"videos", "video_dilatacion_2.mp4")  # MODIFICAR CON EL NOMBRE DEL VIDEO
 OUTPUT_DIR = os.path.join(BASE_DIR, "resultados_pipeline")    # CARPETA CON RESULTADOS
-lado_pixel = 0.7 #mm, cambiar según  corresponda
 
 MOD_DIRS = {
     "0": os.path.join(OUTPUT_DIR, "Modulo_0"),
@@ -88,8 +88,7 @@ path_frame_repr = os.path.join(MOD_DIRS["0"], "frame_representativo.png")
 plt.savefig(path_frame_repr, bbox_inches="tight")
 plt.close()
 
-print(f"\nFrame representativo guardado en: {path_frame_repr}")
-print("Examine el gráfico guardado en el Módulo 0, frame_representativo para definir los límites de la ROI del ojo.\n")
+print("\nIMAGEN frame_representativo: examine el gráfico para definir los límites de la ROI del ojo.\n")
 
 # 2. Input límites para la ROI
 print("<<<<<<<<<<<<<<<< Límites de la ROI >>>>>>>>>>>>>>>>>>>")
@@ -448,7 +447,7 @@ plt.close()
 print("\nIMAGEN 06_histogramas_ruido: muestra el histograma de las imagenes con los ruidos simulados\n")
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n")
+print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 print("1.3 Detección de Bordes y Dominio Frecuencial")
 print("---------------------------------------------")
 
@@ -1207,7 +1206,7 @@ plt.tight_layout()
 plt.savefig(os.path.join(MOD_DIRS["2"], "08_esqueletizacion.png"), bbox_inches="tight")
 plt.close()
 print("\nIMAGEN 08_esqueletizacion: muestra el contorno del contorno pupilar obtenido por esqueletización")
-print(f"  Perímetro aproximado (píxeles del contorno esqueletizado): {esqueleto_contorno.sum()} px\n")
+print(f"  Perímetro aproximado (píxeles del contorno esqueletizado): {esqueleto_contorno.sum()} px")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # 9. Validación multiframe y métricas cuantitativas ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1257,26 +1256,53 @@ path_anotacion_fig = os.path.join(MOD_DIRS["2"], "09_inspeccion_anotacion_manual
 plt.savefig(path_anotacion_fig, bbox_inches="tight")
 plt.close()
 print("\nIMAGEN 09_inspeccion_anotaciones_manual: muestra los frames de validación para comparar los métodos")
-print("\n||||||||||||||||||||||||||||||||||||||||||||")
-print("  SELECCIÓN MANUAL DE LÍMITES DE LA PUPILA")
-print("||||||||||||||||||||||||||||||||||||||||||||")
 
-print(f"Consulte la figura 09 para identificar las coordenadas exactas de la pupila.")
-
-# 3. Solicitud de límites manuales por terminal
+# 3. Solicitud opcional de límites manuales por terminal (con navegación 'v' para volver)
+opcion_val = input("\n¿Desea obtener las métricas de error respecto de una referencia manual? (si/no): ").strip().lower()
+hacer_referencia = opcion_val in ["si", "s", "sí"]
 
 anotaciones = {}
-for nombre in frames_val.keys():
-    print(f"\nIngrese los límites del disco pupilar para el frame {nombre}:")
-    try:
-        x_izq = int(input("  x_izq (límite izquierdo [px]): "))
-        x_der = int(input("  x_der (límite derecho [px]): "))
-        y_sup = int(input("  y_sup (límite superior [px]): "))
-        y_inf = int(input("  y_inf (límite inferior [px]): "))
-    except ValueError:
-        print("Entrada inválida. Se asignarán valores por defecto para continuar.")
-        x_izq, x_der, y_sup, y_inf = 98, 122, 57, 83
-    anotaciones[nombre] = (x_izq, x_der, y_sup, y_inf)
+
+if hacer_referencia:
+    print("\n||||||||||||||||||||||||||||||||||||||||||||")
+    print("  SELECCIÓN MANUAL DE LÍMITES DE LA PUPILA")
+    print("||||||||||||||||||||||||||||||||||||||||||||\n")
+    print("  Consulte la figura 09 para identificar las coordenadas exactas de la pupila.")
+    print("  Nota: en caso de error de tipeo, ingrese 'v' en cualquier momento para volver a la coordenada anterior.\n")
+
+    pasos = []
+    for nombre in frames_val.keys():
+        for c_key, c_desc in [("x_izq", "x_izq (límite izquierdo)"), 
+                             ("x_der", "x_der (límite derecho)"), 
+                             ("y_sup", "y_sup (límite superior)"), 
+                             ("y_inf", "y_inf (límite inferior)")]:
+            pasos.append((nombre, c_key, c_desc))
+
+    valores_anotacion = {}
+    i = 0
+    while i < len(pasos):
+        nombre, c_key, c_desc = pasos[i]
+        entrada = input(f"  Frame {nombre} -> {c_desc} [px]: ").strip().lower()
+        if entrada == "v":
+            if i > 0:
+                i -= 1
+                print("  << Volviendo a la coordenada anterior...\n")
+            else:
+                print("  Ya se encuentra en la primera coordenada.\n")
+        else:
+            try:
+                valores_anotacion[(nombre, c_key)] = int(entrada)
+                i += 1
+            except ValueError:
+                print("  Entrada inválida. Ingrese un número entero o 'v' para volver.")
+
+    for nombre in frames_val.keys():
+        anotaciones[nombre] = (
+            valores_anotacion[(nombre, "x_izq")],
+            valores_anotacion[(nombre, "x_der")],
+            valores_anotacion[(nombre, "y_sup")],
+            valores_anotacion[(nombre, "y_inf")]
+        )
 
 def mascara_referencia(anotacion, forma):
     x_izq, x_der, y_sup, y_inf = anotacion
@@ -1345,7 +1371,7 @@ def segmentar_todos(frame_rgb, semilado=45):
         salida[k] = full
     return salida, (cx, cy)
 
-# 5. Cálculo de métricas cuantitativas
+# 5. Cálculo de métricas cuantitativas (si se seleccionó referencia)
 def dice(a, b):
     denom = a.sum() + b.sum()
     return (2.0 * np.logical_and(a, b).sum() / denom) if denom > 0 else 0.0
@@ -1357,42 +1383,48 @@ def jaccard(a, b):
 filas = []
 resultados_val = {}
 
-for nombre, anot in anotaciones.items():
-    if nombre not in frames_val:
-        continue
+for nombre in frames_val.keys():
     mascaras_f, centro_f = segmentar_todos(frames_val[nombre])
-    ref = mascara_referencia(anot, mascaras_f["Otsu"].shape)
-    resultados_val[nombre] = (mascaras_f, ref, centro_f)
+    
+    if hacer_referencia and nombre in anotaciones:
+        ref = mascara_referencia(anotaciones[nombre], mascaras_f["Otsu"].shape)
+        resultados_val[nombre] = (mascaras_f, ref, centro_f)
 
-    for metodo, mf in mascaras_f.items():
-        error_area = (100.0 * (mf.sum() - ref.sum()) / ref.sum()) if ref.sum() > 0 else 0.0
-        filas.append({
-            "Frame": nombre,
-            "Método": metodo,
-            "Dice": dice(mf, ref),
-            "Jaccard / IoU": jaccard(mf, ref),
-            "Error de área [%]": error_area
-        })
+        for metodo, mf in mascaras_f.items():
+            error_area = (100.0 * (mf.sum() - ref.sum()) / ref.sum()) if ref.sum() > 0 else 0.0
+            filas.append({
+                "Frame": nombre,
+                "Método": metodo,
+                "Dice": dice(mf, ref),
+                "Jaccard / IoU": jaccard(mf, ref),
+                "Error de área [%]": error_area
+            })
+    else:
+        resultados_val[nombre] = (mascaras_f, None, centro_f)
 
-df_val = pd.DataFrame(filas)
+if hacer_referencia and len(filas) > 0:
+    df_val = pd.DataFrame(filas)
 
-print("\n--------------------------------------------------")
-print("Métricas de validación + comparación de resultados")
-print("--------------------------------------------------\n")
+    print("\n--------------------------------------------------")
+    print("Métricas de validación + comparación de resultados")
+    print("--------------------------------------------------\n")
 
-for nombre, (_, ref, _) in resultados_val.items():
-    d_ref = 2.0 * np.sqrt(ref.sum() / np.pi)
-    print(f"{nombre}: Diámetro equivalente de referencia = {d_ref:.1f} px")
+    for nombre, (_, ref, _) in resultados_val.items():
+        if ref is not None:
+            d_ref = 2.0 * np.sqrt(ref.sum() / np.pi)
+            print(f"{nombre}: Diámetro equivalente de referencia = {d_ref:.1f} px")
 
-# Guardado en CSV
-path_csv_val = os.path.join(MOD_DIRS["2"], "metricas_validacion.csv")
-df_val.to_csv(path_csv_val, index=False)
-print(f"\nTABLA metricas_validacion.csv: métricas Dice, Jaccard, Error de área respecto de las referencias para cada método\n")
+    # Guardado en CSV
+    path_csv_val = os.path.join(MOD_DIRS["2"], "metricas_validacion.csv")
+    df_val.to_csv(path_csv_val, index=False)
+    print(f"\nTABLA metricas_validacion.csv: métricas Dice, Jaccard, Error de área respecto de las referencias\n")
 
-# Resumen numérico agrupado
-resumen = df_val.groupby("Método", sort=False)[["Dice", "Jaccard / IoU", "Error de área [%]"]].agg(["mean", "std"]).round(3)
-print("======================= RESUMEN DE MÉTRICAS (PROMEDIO Y DESVÍO ESTÁNDAR) =======================")
-print(resumen.to_string())
+    # Resumen numérico agrupado
+    resumen = df_val.groupby("Método", sort=False)[["Dice", "Jaccard / IoU", "Error de área [%]"]].agg(["mean", "std"]).round(3)
+    print("======================= RESUMEN DE MÉTRICAS (PROMEDIO Y DESVÍO ESTÁNDAR) =======================")
+    print(resumen.to_string(col_space=12))
+else:
+    print("\nValidación con referencia manual omitida. Generando gráfico de superposición directo...")
 
 # 6. Superposición de contornos sobre los frames de validación
 metodos_graf = ["Otsu", "K-Means (K=5)", "Snake", "Watershed", "Otsu + Cierre + Apertura + Relleno"]
@@ -1402,7 +1434,8 @@ fig, axs = plt.subplots(1, len(resultados_val), figsize=(5 * len(resultados_val)
 
 for ax, (nombre, (mascaras_f, ref, (cx_f, cy_f))) in zip(axs[0], resultados_val.items()):
     ax.imshow(frames_val[nombre][y_inicial:y_final, x_inicial:x_final])
-    ax.contour(ref, levels=[0.5], colors="lime", linewidths=2)
+    if ref is not None:
+        ax.contour(ref, levels=[0.5], colors="lime", linewidths=2)
     for met, col in zip(metodos_graf, colores):
         ax.contour(mascaras_f[met], levels=[0.5], colors=col, linewidths=1)
     ax.set_xlim(cx_f - 30, cx_f + 30)
@@ -1410,15 +1443,21 @@ for ax, (nombre, (mascaras_f, ref, (cx_f, cy_f))) in zip(axs[0], resultados_val.
     ax.set_title(nombre, fontweight="bold")
     ax.axis("off")
 
-handles = [plt.Line2D([], [], color=c_) for c_ in ["lime"] + colores]
-fig.legend(handles, ["Referencia manual"] + metodos_graf, loc="lower center", ncol=6)
+if hacer_referencia:
+    handles = [plt.Line2D([], [], color=c_) for c_ in ["lime"] + colores]
+    labels_legend = ["Referencia manual"] + metodos_graf
+else:
+    handles = [plt.Line2D([], [], color=c_) for c_ in colores]
+    labels_legend = metodos_graf
+
+fig.legend(handles, labels_legend, loc="lower center", ncol=len(labels_legend))
 plt.tight_layout(rect=[0, 0.08, 1, 1])
 
 path_fig_superposicion = os.path.join(MOD_DIRS["2"], "10_superposicion_contornos_validacion.png")
 plt.savefig(path_fig_superposicion, bbox_inches="tight")
 plt.close()
 
-print("\nIMAGEN 10_superposicion_contornos_validacion: muestra la superposición de los contornos de cada método, junto con las anotaciones manuales\n")
+print("\nIMAGEN 10_superposicion_contornos_validacion: muestra la superposición de los contornos de cada método de segmentación\n")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -1599,7 +1638,7 @@ print(f"Área (A): {area:.2f} px")
 print(f"Perímetro (P): {perimetro:.2f} px")
 print(f"Centroide (Xc, Yc): ({xc:.2f}, {yc:.2f}) px")
 print(f"Circularidad (C): {circularidad:.4f}")
-print(f"Excentricidad (e): {excentricidad:.4f}\n")
+print(f"Excentricidad (e): {excentricidad:.4f}")
 # |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
 # 2. Descriptores de Textura de Primer Orden (Canales RGB) ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -1738,7 +1777,6 @@ width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 duracion_s = total_frames / fps if fps > 0 else 0.0
 
-
 # Coordenadas de la ROI del ojo (extendida con 5 px de margen sobre la elegida en Módulo 0)
 y0_ojo = max(0, y_inicial - 5)
 y1_ojo = min(height, y_final + 5)
@@ -1798,33 +1836,57 @@ path_inspeccion_key = os.path.join(MOD_DIRS["3"], "03_inspeccion_keyframes_video
 plt.savefig(path_inspeccion_key, bbox_inches="tight")
 plt.close()
 
-print(f"\nIMAGEN 03_inspeccion_keyframes_video: muestra los frames comparativos\n")
+print("\nIMAGEN 03_inspeccion_keyframes_video: muestra los frames comparativos\n")
 
 # 2. Entrada interactiva o salteo de validación
 opcion = input("¿Desea ingresar los límites para la validación Ground Truth? (si/no): ").strip().lower()
 
 if opcion in ["no", "n"]:
-    print("\nValidación omitida por el usuario. Se proseguirá únicamente con el procesamiento automático.")
+    print("\nValidación omitida por el usuario. Se proseguirá únicamente con el procesamiento automático.\n")
     df_gt = None
 else:
-    anotaciones_video = {}
-    print("\nIngrese los límites (x1, x2, y1, y2) observados en 03_inspeccion_keyframes_video.:")
+    print("\n||||||||||||||||||||||||||||||||||||||||||||")
+    print("  SELECCIÓN MANUAL DE LÍMITES GROUND TRUTH")
+    print("||||||||||||||||||||||||||||||||||||||||||||\n")
+    print("Consulte '03_inspeccion_keyframes_video.png' para identificar las coordenadas.")
+    print("Nota: Ingrese 'v' en cualquier momento para volver a la coordenada anterior.\n")
+
+    # Construcción de la secuencia de pasos para navegación revertible
+    pasos_gt = []
     for idx_frame in frames_objetivo:
         tiempo_s = frames_extraidos[idx_frame][1]
-        print(f"\nFrame {idx_frame} (t = {tiempo_s:.2f}s):")
-        try:
-            x1 = int(input("  x1: "))
-            x2 = int(input("  x2: "))
-            y1 = int(input("  y1: "))
-            y2 = int(input("  y2: "))
-        except ValueError:
-            print("  Entrada inválida. Se asigna centro predeterminado.")
-            roi_tmp = frames_extraidos[idx_frame][0]
-            x1, x2 = int(roi_tmp.shape[1] * 0.3), int(roi_tmp.shape[1] * 0.7)
-            y1, y2 = int(roi_tmp.shape[0] * 0.3), int(roi_tmp.shape[0] * 0.7)
-        anotaciones_video[idx_frame] = (x1, x2, y1, y2)
+        for c_key, c_desc in [("x1", "x1"), ("x2", "x2"), ("y1", "y1"), ("y2", "y2")]:
+            pasos_gt.append((idx_frame, tiempo_s, c_key, c_desc))
 
-    # 3. Construcción visual y geométrica 
+    valores_gt = {}
+    k = 0
+    while k < len(pasos_gt):
+        idx_frame, tiempo_s, c_key, c_desc = pasos_gt[k]
+        entrada = input(f"  Frame {idx_frame} (t = {tiempo_s:.2f}s) -> {c_desc}: ").strip().lower()
+
+        if entrada == "v":
+            if k > 0:
+                k -= 1
+                print("  << Volviendo a la coordenada anterior...\n")
+            else:
+                print("  Ya se encuentra en la primera coordenada.\n")
+        else:
+            try:
+                valores_gt[(idx_frame, c_key)] = int(entrada)
+                k += 1
+            except ValueError:
+                print("  Entrada inválida. Ingrese un entero o 'v' para volver.")
+
+    anotaciones_video = {}
+    for idx_frame in frames_objetivo:
+        anotaciones_video[idx_frame] = (
+            valores_gt[(idx_frame, "x1")],
+            valores_gt[(idx_frame, "x2")],
+            valores_gt[(idx_frame, "y1")],
+            valores_gt[(idx_frame, "y2")],
+        )
+
+    # 3. Construcción visual y geométrica
     fig, axs = plt.subplots(rows, cols, figsize=(18, 5 * rows))
     axs = np.array(axs).reshape(-1)
 
@@ -1858,7 +1920,7 @@ else:
             "Yc_loc": yc_loc,
         })
 
-        # Dibujo de elipse ajustada (verde) y centroide (rojo) sobre la ROI
+        # Dibujo fino de elipse (verde, 1 px) y centroide (rojo, radio 3 px)
         cv2.ellipse(
             roi_ojo,
             (int(xc_loc), int(yc_loc)),
@@ -1867,19 +1929,27 @@ else:
             0,
             360,
             (0, 255, 0),
-            2,
+            1,
+            lineType=cv2.LINE_AA,
         )
-        cv2.circle(roi_ojo, (int(xc_loc), int(yc_loc)), 4, (255, 0, 0), -1)
+        cv2.circle(
+            roi_ojo,
+            (int(xc_loc), int(yc_loc)),
+            3,
+            (255, 0, 0),
+            -1,
+            lineType=cv2.LINE_AA,
+        )
 
         ax = axs[i]
         ax.imshow(roi_ojo)
 
         # Grilla de referencia espacial
         alto, ancho = roi_ojo.shape[:2]
-        ax.set_xticks(np.arange(0, ancho, 50))
-        ax.set_yticks(np.arange(0, alto, 50))
-        ax.set_xticks(np.arange(0, ancho, 10), minor=True)
-        ax.set_yticks(np.arange(0, alto, 10), minor=True)
+        ax.set_xticks(np.arange(0, ancho, 25))
+        ax.set_yticks(np.arange(0, alto, 25))
+        ax.set_xticks(np.arange(0, ancho, 5), minor=True)
+        ax.set_yticks(np.arange(0, alto, 5), minor=True)
 
         ax.grid(which="major", color="white", linewidth=0.6, alpha=0.7)
         ax.grid(which="minor", color="white", linewidth=0.2, alpha=0.3)
@@ -1917,6 +1987,7 @@ else:
             index=False
         )
     )
+
 cap.release()
 # ______________________________________________________________________________________________________________________________________________________________________________
 
@@ -2119,7 +2190,7 @@ def procesar_video_pupilometria(path_video_input):
 
     df_resultados = pd.DataFrame(registros)
     print(
-        f"\nVideo {nombre_base} procesado exitosamente ({n_frame} frames guardados)."
+        f"\nVideo {nombre_base} procesado exitosamente ({n_frame} frames guardados).\n"
     )
     return df_resultados, fps_v
 
@@ -2259,7 +2330,7 @@ plt.tight_layout()
 path_tray_cent = os.path.join(MOD_DIRS["3"], "06_trayectoria_centroide.png")
 plt.savefig(path_tray_cent, bbox_inches="tight")
 plt.close()
-print("\nIMAGEN 06_trayectoria_centroide: se ve el movimiento del centroide en x e y\n")
+print("\nIMAGEN 06_trayectoria_centroide: se ve el movimiento del centroide en sus coordenadas x,y del video.\n")
 
 # -----------------------------------------------------------------------------
 # 6. Extracción y Exportación de Parámetros Fisiológicos
@@ -2330,14 +2401,25 @@ df_fisiologico = pd.DataFrame(datos_fisiologicos)
 path_csv_fisio = os.path.join(MOD_DIRS["3"], "parametros_fisiologicos.csv")
 df_fisiologico.to_csv(path_csv_fisio, index=False)
 
-
 # -----------------------------------------------------------------------------
-# 6. Extracción y Exportación de Parámetros Fisiológicos
+# 6. Extracción y Exportación de Parámetros Fisiológicos (Soporta Contracción y Dilatación)
 # -----------------------------------------------------------------------------
-t_max_v = df_auto["Tiempo [s]"].max()
-t_flash = 9.0 if t_max_v >= 9.0 else (t_max_v * 0.5)
+t_max_v = float(df_auto["Tiempo [s]"].max())
 
-# Estado Basal (Promedio antes del estímulo)
+# 1. Solicitar por consola el momento del estímulo/flash
+print("\n==================================================")
+print(" EXTRACCIÓN DE PARÁMETROS FISIOLÓGICOS DINÁMICOS")
+print("==================================================")
+t_flash_def = round(t_max_v * 0.5, 2)
+t_flash_in = input(f"Ingrese el segundo del estímulo/flash (t_flash) [Enter para {t_flash_def}s]: ").strip()
+
+try:
+    t_flash = float(t_flash_in) if t_flash_in != "" else t_flash_def
+except ValueError:
+    print(f"Entrada inválida. Asignando t_flash por defecto = {t_flash_def}s.")
+    t_flash = t_flash_def
+
+# 2. Estado Basal (Promedio de las mediciones previas al estímulo)
 mask_basal = (df_auto["Tiempo [s]"] >= (t_flash * 0.1)) & (df_auto["Tiempo [s]"] <= t_flash)
 if not mask_basal.any():
     mask_basal = df_auto["Tiempo [s]"] <= t_flash
@@ -2345,73 +2427,447 @@ if not mask_basal.any():
 d_basal = float(df_auto.loc[mask_basal, "Diámetro_Filtrado [px]"].mean())
 a_basal = float(df_auto.loc[mask_basal, "Área_Filtrada [px]"].mean())
 
-# Respuesta Mínima (Ventana de constricción post-estímulo)
+# 3. Ventana de Respuesta Post-Estímulo (4 segundos posteriores)
 mask_resp = (df_auto["Tiempo [s]"] >= t_flash) & (df_auto["Tiempo [s]"] <= min(t_flash + 4.0, t_max_v))
 if not mask_resp.any():
     mask_resp = df_auto["Tiempo [s]"] >= t_flash
 
-idx_min = df_auto.loc[mask_resp, "Diámetro_Filtrado [px]"].idxmin()
+df_post = df_auto.loc[mask_resp]
 
-d_min = float(df_auto.loc[idx_min, "Diámetro_Filtrado [px]"])
-a_min = float(df_auto.loc[idx_min, "Área_Filtrada [px]"])
-t_min = float(df_auto.loc[idx_min, "Tiempo [s]"])
+idx_min = df_post["Diámetro_Filtrado [px]"].idxmin()
+idx_max = df_post["Diámetro_Filtrado [px]"].idxmax()
 
-# Inicio de la constricción
-delta_caida = 1.0 if d_basal < 10 else 2.0
-mask_caida = (df_auto["Tiempo [s]"] >= t_flash) & (
-    df_auto["Diámetro_Filtrado [px]"] < (d_basal - delta_caida)
-)
-t_inicio_const = (
-    float(df_auto.loc[mask_caida, "Tiempo [s]"].iloc[0])
-    if mask_caida.any()
-    else t_flash + 0.2
-)
+d_min = float(df_post.loc[idx_min, "Diámetro_Filtrado [px]"])
+d_max = float(df_post.loc[idx_max, "Diámetro_Filtrado [px]"])
 
-# Cálculos dinámicos
-latencia = t_inicio_const - t_flash
-amplitud_diam = d_basal - d_min
-amplitud_area_pct = ((a_basal - a_min) / a_basal) * 100.0 if a_basal > 0 else 0.0
-dt_const = t_min - t_inicio_const
-v_constriccion = (amplitud_diam / dt_const) if dt_const > 0 else 0.0
+caida_max = d_basal - d_min
+subida_max = d_max - d_basal
 
-# Redilatación
-mask_redil = (df_auto["Tiempo [s]"] > t_min) & (
-    df_auto["Tiempo [s]"] <= min(t_min + 1.0, t_max_v)
-)
-if mask_redil.any():
-    d_post = float(df_auto.loc[mask_redil, "Diámetro_Filtrado [px]"].iloc[-1])
-    dt_redil = float(df_auto.loc[mask_redil, "Tiempo [s]"].iloc[-1] - t_min)
-    v_redilatacion = ((d_post - d_min) / dt_redil) if dt_redil > 0 else 0.0
+# Determinación automática del tipo de dinámica (Contracción vs Dilatación)
+es_contraccion = caida_max >= subida_max
+
+if es_contraccion:
+    tipo_respuesta = "Contracción (Miosis)"
+    d_extremo = d_min
+    t_extremo = float(df_post.loc[idx_min, "Tiempo [s]"])
+    a_extremo = float(df_post.loc[idx_min, "Área_Filtrada [px]"])
+    
+    # Inicio de la caída
+    delta_caida = 1.0 if d_basal < 10 else 2.0
+    mask_inicio = (df_auto["Tiempo [s]"] >= t_flash) & (df_auto["Diámetro_Filtrado [px]"] < (d_basal - delta_caida))
+    t_inicio = float(df_auto.loc[mask_inicio, "Tiempo [s]"].iloc[0]) if mask_inicio.any() else t_flash + 0.2
+    
+    latencia = max(0.0, t_inicio - t_flash)
+    amplitud_diam = caida_max
+    amplitud_area_pct = ((a_basal - a_extremo) / a_basal) * 100.0 if a_basal > 0 else 0.0
+    
+    dt_const = t_extremo - t_inicio
+    v_constriccion = (amplitud_diam / dt_const) if dt_const > 0 else 0.0
+    
+    # Redilatación posterior al mínimo
+    mask_redil = (df_auto["Tiempo [s]"] > t_extremo) & (df_auto["Tiempo [s]"] <= min(t_extremo + 1.5, t_max_v))
+    if mask_redil.any():
+        d_post_redil = float(df_auto.loc[mask_redil, "Diámetro_Filtrado [px]"].iloc[-1])
+        dt_redil = float(df_auto.loc[mask_redil, "Tiempo [s]"].iloc[-1] - t_extremo)
+        v_dilatacion = ((d_post_redil - d_extremo) / dt_redil) if dt_redil > 0 else 0.0
+    else:
+        v_dilatacion = 0.0
+
 else:
-    v_redilatacion = 0.0
+    tipo_respuesta = "Dilatación (Midriasis)"
+    d_extremo = d_max
+    t_extremo = float(df_post.loc[idx_max, "Tiempo [s]"])
+    a_extremo = float(df_post.loc[idx_max, "Área_Filtrada [px]"])
+    
+    # Inicio del aumento de tamaño
+    delta_subida = 1.0 if d_basal < 10 else 2.0
+    mask_inicio = (df_auto["Tiempo [s]"] >= t_flash) & (df_auto["Diámetro_Filtrado [px]"] > (d_basal + delta_subida))
+    t_inicio = float(df_auto.loc[mask_inicio, "Tiempo [s]"].iloc[0]) if mask_inicio.any() else t_flash + 0.2
+    
+    latencia = max(0.0, t_inicio - t_flash)
+    amplitud_diam = subida_max
+    amplitud_area_pct = ((a_extremo - a_basal) / a_basal) * 100.0 if a_basal > 0 else 0.0
+    
+    v_constriccion = 0.0
+    dt_dil = t_extremo - t_inicio
+    v_dilatacion = (amplitud_diam / dt_dil) if dt_dil > 0 else 0.0
 
-# 1. Diccionario estructurado
+# 4. Construcción del diccionario estructurado
 datos_fisiologicos = {
+    "Tipo de Respuesta": tipo_respuesta,
+    "Instante Estímulo [s]": round(t_flash, 2),
     "Diámetro Basal [px]": round(d_basal, 2),
-    "Diámetro Mínimo [px]": round(d_min, 2),
+    "Diámetro Extremo [px]": round(d_extremo, 2),
     "Tiempo Latencia [s]": round(latencia, 2),
     "Amplitud Respuesta (D) [px]": round(amplitud_diam, 2),
     "Amplitud Área [%]": round(amplitud_area_pct, 1),
     "Velocidad Constricción [px/s]": round(v_constriccion, 2),
-    "Velocidad Redilatación [px/s]": round(v_redilatacion, 2),
+    "Velocidad Dilatación [px/s]": round(v_dilatacion, 2),
 }
 
-# 2. Exportación normal a CSV (formato dataset de 1 fila)
+# Exportación CSV (formato dataset de 1 fila)
 df_fisiologico = pd.DataFrame([datos_fisiologicos])
 path_csv_fisio = os.path.join(MOD_DIRS["3"], "parametros_fisiologicos.csv")
 df_fisiologico.to_csv(path_csv_fisio, index=False)
 
-# 3. DataFrame traspuesto (vertical) para impresión prolija en consola
+# DataFrame traspuesto (vertical) para impresión prolija en consola
 df_fisio_transp = pd.DataFrame(
     list(datos_fisiologicos.items()), 
     columns=["Parámetro Fisiológico", "Valor"]
 )
-print(f"\nTABLA parametros_fisiologicos.csv: se ven los parámetros extraídos de la curva\n")
+
+print("\nTABLA parametros_fisiologicos.csv: se ven los parámetros extraídos de la curva\n")
 print("//////////////////////////////////////////////")
 print(" PARÁMETROS FISIOLÓGICOS EXTRAÍDOS DE LA CURVA")
 print("//////////////////////////////////////////////")
-print(df_fisiologico.to_string(index=False))
+print(df_fisio_transp.to_string(index=False, col_space=32, justify="left"))
+print(f"\nVIDEO anotado_{os.path.basename(VIDEO_PATH)}: muestra la segmentación de la pupila frame a frame y la ubicación del centroide.\n  Además se calcula el diámetro y se muestra el tiempo\n")
 # _______________________________________________________________________________________________________________________________________________________________
+
+
+# MÓDULO 4: COMPRESIÓN DE IMÁGENES Y EVALUACIÓN DE DEGRADACIÓN ###########################################################################################################
+
+print_header("MÓDULO 4: COMPRESIÓN DE LA INFORMACIÓN DE LA IMAGEN")
+# -----------------------------------------------------------------------------
+# 1. Clases y Funciones de Compresión (Huffman, RLE, JPEG)
+# -----------------------------------------------------------------------------
+class NodoHuffman:
+    def __init__(self, simbolo, frecuencia):
+        self.simbolo = simbolo
+        self.frecuencia = frecuencia
+        self.izq = None
+        self.der = None
+
+    def __lt__(self, otro):
+        return self.frecuencia < otro.frecuencia
+
+
+def evaluar_huffman(img):
+    flat = img.flatten()
+    n_pixels = flat.size
+    frecuencias = Counter(flat)
+
+    heap = [NodoHuffman(sym, freq) for sym, freq in frecuencias.items()]
+    heapq.heapify(heap)
+
+    if len(heap) == 1:
+        tabla_codigos = {heap[0].simbolo: "0"}
+    else:
+        while len(heap) > 1:
+            n1, n2 = heapq.heappop(heap), heapq.heappop(heap)
+            padre = NodoHuffman(None, n1.frecuencia + n2.frecuencia)
+            padre.izq, padre.der = n1, n2
+            heapq.heappush(heap, padre)
+
+        raiz = heap[0]
+        tabla_codigos = {}
+
+        def _gen_cods(nodo, c=""):
+            if nodo:
+                if nodo.simbolo is not None:
+                    tabla_codigos[nodo.simbolo] = c
+                _gen_cods(nodo.izq, c + "0")
+                _gen_cods(nodo.der, c + "1")
+
+        _gen_cods(raiz)
+
+    bits_datos = sum(len(tabla_codigos[val]) for val in flat)
+    bits_overhead = len(tabla_codigos) * 16  # Overhead de la tabla de frecuencias
+    bits_comprimidos = bits_datos + bits_overhead
+    bytes_comprimidos = bits_comprimidos / 8.0
+    bytes_originales = img.nbytes
+
+    cr = bytes_originales / bytes_comprimidos if bytes_comprimidos > 0 else 0.0
+    bpp = bits_comprimidos / n_pixels
+
+    return {
+        "Método": "Huffman",
+        "Bytes Orig.": bytes_originales,
+        "Bytes Comp.": int(bytes_comprimidos),
+        "CR": cr,
+        "bpp": bpp,
+        "MSE": 0.0,
+        "PSNR [dB]": float("inf"),
+        "SSIM": 1.0,
+    }
+
+
+def evaluar_rle(img, direccion="horizontal"):
+    flat = img.T.flatten() if direccion == "vertical" else img.flatten()
+    if len(flat) == 0:
+        return {}
+
+    secuencia = []
+    val_act, len_act = flat[0], 1
+    for val in flat[1:]:
+        if val == val_act and len_act < 255:
+            len_act += 1
+        else:
+            secuencia.append((val_act, len_act))
+            val_act, len_act = val, 1
+    secuencia.append((val_act, len_act))
+
+    bytes_comprimidos = len(secuencia) * 2  # 2 bytes por par (valor + longitud)
+    bytes_originales = img.nbytes
+    cr = bytes_originales / bytes_comprimidos if bytes_comprimidos > 0 else 0.0
+    bpp = (bytes_comprimidos * 8) / flat.size
+
+    return {
+        "Método": f"RLE ({direccion.capitalize()})",
+        "Bytes Orig.": bytes_originales,
+        "Bytes Comp.": bytes_comprimidos,
+        "CR": cr,
+        "bpp": bpp,
+        "MSE": 0.0,
+        "PSNR [dB]": float("inf"),
+        "SSIM": 1.0,
+    }
+
+
+def evaluar_jpeg(img, Q):
+    bytes_originales = img.nbytes
+    es_gris = len(img.shape) == 2 or img.shape[2] == 1
+
+    param_encode = [int(cv2.IMWRITE_JPEG_QUALITY), Q]
+    _, buffer_jpg = cv2.imencode(".jpg", img, param_encode)
+
+    bytes_comprimidos = len(buffer_jpg)
+    cr = bytes_originales / bytes_comprimidos if bytes_comprimidos > 0 else 0.0
+    bpp = (bytes_comprimidos * 8) / img.size
+
+    img_dec = (
+        cv2.imdecode(buffer_jpg, cv2.IMREAD_GRAYSCALE)
+        if es_gris
+        else cv2.imdecode(buffer_jpg, cv2.IMREAD_COLOR)
+    )
+
+    mse = float(np.mean((img.astype(float) - img_dec.astype(float)) ** 2))
+    psnr_val = (
+        float("inf") if mse == 0 else 20.0 * np.log10(255.0 / np.sqrt(mse))
+    )
+    ssim_val = float(ssim(img, img_dec, data_range=255.0))
+
+    return {
+        "Método": f"JPEG (Q={Q})",
+        "Bytes Orig.": bytes_originales,
+        "Bytes Comp.": bytes_comprimidos,
+        "CR": cr,
+        "bpp": bpp,
+        "MSE": mse,
+        "PSNR [dB]": psnr_val,
+        "SSIM": ssim_val,
+        "Imagen Decodificada": img_dec,
+    }
+
+
+# -----------------------------------------------------------------------------
+# 2. Carga Segura de Variables desde la Memoria del Script
+# -----------------------------------------------------------------------------
+if "roi_gris" in locals():
+    img_roi_gris = roi_gris.copy()
+else:
+    # Respaldo de extracción directa si no existe en la memoria local
+    cap_tmp = cv2.VideoCapture(VIDEO_PATH)
+    ret_tmp, frame_tmp = cap_tmp.read()
+    cap_tmp.release()
+    img_roi_gris = cv2.cvtColor(
+        frame_tmp[y_inicial:y_final, x_inicial:x_final], cv2.COLOR_BGR2GRAY
+    )
+
+mascara_ref = locals().get(
+    "mascara_ws",
+    locals().get(
+        "mask_sub",
+        locals().get("img_4", (img_roi_gris < 50).astype(np.uint8)),
+    ),
+)
+img_mascara_bin = (
+    (mascara_ref.astype(np.uint8)) * 255
+    if mascara_ref.max() <= 1
+    else mascara_ref.astype(np.uint8)
+)
+
+
+# -----------------------------------------------------------------------------
+# 3. Generación de Tablas de Evaluación Comparativa
+# -----------------------------------------------------------------------------
+def construir_tabla_comparativa(img_target, es_binaria=False):
+    lista_res = []
+
+    # 1. Huffman
+    lista_res.append(evaluar_huffman(img_target))
+
+    # 2. RLE Horizontal y Vertical
+    lista_res.append(evaluar_rle(img_target, "horizontal"))
+    lista_res.append(evaluar_rle(img_target, "vertical"))
+
+    # 3. JPEG
+    dict_jpeg = {}
+    for Q in [90, 50, 10, 5]:
+        res_j = evaluar_jpeg(img_target, Q)
+        dict_jpeg[Q] = res_j.pop("Imagen Decodificada")
+        lista_res.append(res_j)
+
+    df = pd.DataFrame(lista_res)
+    df["CR_str"] = df["CR"].apply(lambda x: f"{x:.2f}:1")
+    df["bpp_str"] = df["bpp"].apply(lambda x: f"{x:.2f}")
+    df["PSNR_str"] = df["PSNR [dB]"].apply(
+        lambda x: "Infinito" if np.isinf(x) else f"{x:.2f}"
+    )
+    df["SSIM_str"] = df["SSIM"].apply(lambda x: f"{x:.4f}")
+    df["MSE_str"] = df["MSE"].apply(lambda x: f"{x:.2f}")
+
+    return (
+        df[
+            [
+                "Método",
+                "Bytes Orig.",
+                "Bytes Comp.",
+                "CR_str",
+                "bpp_str",
+                "MSE_str",
+                "PSNR_str",
+                "SSIM_str",
+            ]
+        ].rename(
+            columns={
+                "CR_str": "CR (Ratio)",
+                "bpp_str": "bpp",
+                "MSE_str": "MSE",
+                "PSNR_str": "PSNR [dB]",
+                "SSIM_str": "SSIM",
+            }
+        ),
+        dict_jpeg,
+    )
+
+
+df_metricas_roi, imgs_jpeg_roi = construir_tabla_comparativa(
+    img_roi_gris, es_binaria=False
+)
+df_metricas_mask, imgs_jpeg_mask = construir_tabla_comparativa(
+    img_mascara_bin, es_binaria=True
+)
+
+# Exportación a CSV
+df_metricas_roi.to_csv(os.path.join(MOD_DIRS["4"], "metricas_compresion_roi.csv"), index=False)
+df_metricas_mask.to_csv(os.path.join(MOD_DIRS["4"], "metricas_compresion_mascara.csv"), index=False)
+
+
+print("\nTABLA metricas_compresion_roi.csv: compara los métodos de compresión sobre la ROI\n")
+print("\n                      000000000000000000000000000000000000000000000000000")
+print("                       COMPRESIÓN SOBRE ROI EN ESCALA DE GRISES (CONTINUA)")
+print("                      000000000000000000000000000000000000000000000000000\n")
+print(df_metricas_roi.to_string(index=False, col_space=12, justify="left"))
+
+print("\nTABLA metricas_compresion_mascara.csv: compresion de la mascara pupilar")
+print("\n                      /////////////////////////////////////////////////////")
+print("                       COMPRESIÓN SOBRE MÁSCARA BINARIA SEGMENTADA (PUPILA)")
+print("                      /////////////////////////////////////////////////////\n")
+print(df_metricas_mask.to_string(index=False, col_space=12, justify="left"))
+
+# -----------------------------------------------------------------------------
+# 4. Reevaluación del Diámetro Pupilar según Nivel de Compresión JPEG
+# -----------------------------------------------------------------------------
+def estimar_diametro_de_imagen(img_input):
+    u, binaria = cv2.threshold(
+        img_input, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
+    )
+
+    ee = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    proc = cv2.morphologyEx(binaria, cv2.MORPH_CLOSE, ee)
+    proc = cv2.morphologyEx(proc, cv2.MORPH_OPEN, ee)
+    proc = ndi.binary_fill_holes(proc > 0)
+
+    cnts, _ = cv2.findContours(
+        (proc.astype(np.uint8)) * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
+    if len(cnts) == 0:
+        return 0.0
+
+    cnt_max = max(cnts, key=cv2.contourArea)
+    area = cv2.contourArea(cnt_max)
+    diametro = 2.0 * np.sqrt(area / np.pi)
+    return diametro
+
+
+diam_orig = estimar_diametro_de_imagen(img_roi_gris)
+res_diametros = [
+    {
+        "Calidad (Q)": "Original (Sin comp.)",
+        "Diámetro [px]": f"{diam_orig:.2f}",
+        "Error Absoluto [px]": "0.00",
+        "Diferencia [%]": "0.00%",
+    }
+]
+
+for Q in [90, 50, 10, 5]:
+    d_q = estimar_diametro_de_imagen(imgs_jpeg_roi[Q])
+    err_abs = abs(d_q - diam_orig)
+    err_pct = (err_abs / diam_orig) * 100.0 if diam_orig > 0 else 0.0
+    res_diametros.append({
+        "Calidad (Q)": f"JPEG Q={Q}",
+        "Diámetro [px]": f"{d_q:.2f}",
+        "Error Absoluto [px]": f"{err_abs:.2f}",
+        "Diferencia [%]": f"{err_pct:.2f}%",
+    })
+
+df_impacto_diametro = pd.DataFrame(res_diametros)
+df_impacto_diametro.to_csv(os.path.join(MOD_DIRS["4"], "impacto_compresion_diametro.csv"), index=False)
+
+print("\nTABLA impacto_compresion_diametro.csv: muestra diferencias en el factor de calidad Q en JPEG\n")
+print("              ===================================================")
+print("               IMPACTO DE COMPRESIÓN JPEG EN EL DIÁMETRO ESTIMADO")
+print("              ===================================================")
+print(df_impacto_diametro.to_string(index=False, col_space=18, justify="left"))
+
+
+# -----------------------------------------------------------------------------
+# 5. Visualización de Degradación Estructural
+# -----------------------------------------------------------------------------
+fig, axes = plt.subplots(2, 4, figsize=(16, 8))
+
+for idx, Q in enumerate([90, 50, 10, 5]):
+    # Fila 1: ROI Grises
+    axes[0, idx].imshow(imgs_jpeg_roi[Q], cmap="gray")
+    axes[0, idx].set_title(
+        f"ROI JPEG Q={Q}\nSSIM: {ssim(img_roi_gris, imgs_jpeg_roi[Q], data_range=255.0):.4f}",
+        fontsize=10,
+    )
+    axes[0, idx].axis("off")
+
+    # Fila 2: Máscara Binaria
+    axes[1, idx].imshow(imgs_jpeg_mask[Q], cmap="gray")
+    axes[1, idx].set_title(
+        f"Máscara JPEG Q={Q}\nSSIM: {ssim(img_mascara_bin, imgs_jpeg_mask[Q], data_range=255.0):.4f}",
+        fontsize=10,
+    )
+    axes[1, idx].axis("off")
+
+plt.suptitle(
+    "Comparación de Degradación Estructural: ROI Continua vs. Máscara Binaria",
+    fontsize=13,
+    fontweight="bold",
+)
+plt.tight_layout()
+
+path_fig_compresion = os.path.join(MOD_DIRS["4"], "01_degradacion_compresion_jpeg.png")
+plt.savefig(path_fig_compresion, bbox_inches="tight")
+plt.close()
+
+print(f"\nFIGURA 01_degradacion_compresion_jpeg: se ve la compresión jpeg para distintos Q\n")
+
+print("Llegó al final del procesamiento. Buen día! :)")
+
+
+
+
+
+
+
+
+
+
 
 
 

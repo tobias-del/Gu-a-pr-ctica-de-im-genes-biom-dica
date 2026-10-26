@@ -1,0 +1,6 @@
+Calidad (Q),Diámetro [px],Error Absoluto [px],Diferencia [%]
+Original (Sin comp.),170.15,0.00,0.00%
+JPEG Q=90,170.93,0.78,0.46%
+JPEG Q=50,171.46,1.31,0.77%
+JPEG Q=10,182.60,12.45,7.32%
+JPEG Q=5,186.29,16.14,9.48%
