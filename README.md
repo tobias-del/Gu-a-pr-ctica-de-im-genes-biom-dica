@@ -13,8 +13,6 @@ Script en Python que procesa un video del ojo para segmentar la pupila, extraer 
 3. [Manejo de rutas (path)](#3-manejo-de-rutas-path)
 4. [Workflow del pipeline](#4-workflow-del-pipeline)
 5. [Entradas por terminal (inputs)](#5-entradas-por-terminal-inputs)
-6. [Resultados generados](#6-resultados-generados)
-7. [Instante del estímulo (flash)](#7-instante-del-estímulo-flash).
 ---
 
 ## 1. Requisitos e instalación
