@@ -106,96 +106,23 @@ El script se ejecuta de principio a fin en un solo proceso, pero es **interactiv
 
 ## 5. Entradas por terminal (inputs)
 
-Todas las coordenadas se ingresan como **enteros en píxeles**. El eje Y crece **hacia abajo** (y = 0 es el borde superior de la imagen), igual que en las figuras.
+> **Nota importante:** Prestar especial atención a los mensajes emitidos por la terminal durante la ejecución. En cada paso se explican en detalle los resultados procesados y se numera e identifica formalmente cada **IMAGEN**, **FIGURA** y **TABLA** exportada. Además, durante el ingreso de coordenadas de pupila en los Módulos 2 y 3, puede presionar la tecla **`v`** en cualquier momento para retroceder y corregir un valor ingresado por error.
 
-### Input 1 — Segundo del frame representativo (Módulo 0)
+El pipeline requiere un total de **7 entradas** organizadas en el siguiente flujo:
 
-```
-Ingrese el segundo del video del cual quiere extraer el frame representativo:
-```
+## Módulo 0 — Selección de escena y ROI
+[Input 1] Segundo del frame representativo: Instante en segundos (ej: 3.5). Elegir un momento previo al estímulo con la pupila bien visible.
 
-| Qué ingresar | Formato | Ejemplo |
-|---|---|---|
-| Instante del video, en segundos | número decimal | `3.5` |
+[Input 2] Límites de la ROI del ojo (x_inicial, x_final, y_inicial, y_final): Coordenadas enteras [px] obtenidas de Modulo_0/frame_representativo.png para encuadrar la región del ojo.
 
-Elegir un instante con el ojo bien abierto, sin parpadeo y **antes del estímulo**, con la pupila bien visible. Debe ser menor que la duración del video, que se imprime justo antes. Este instante también define los frames de validación del Módulo 2 (t + 0.5, t + 1.0 y t + 1.5 s), así que **debe quedar al menos 1.5 s de video después**.
+## Módulo 2 — Validación cuantitativa de métodos
+[Input 3] Confirmación de validación (si/no): Activa o saltea la generación de la tabla de métricas (Dice, IoU, Error de área).
 
-### Input 2 — Límites de la ROI del ojo (Módulo 0)
+[Input 4] Límites de pupila en 3 frames (x_izq, x_der, y_sup, y_inf): (Si Input 3 = si) Coordenadas [px] leídas de Modulo_2/09_inspeccion_anotacion_manual.png para definir la referencia manual en $t+0.5\text{s}$, $t+1.0\text{s}$ y $t+1.5\text{s}$.
 
-Figura de referencia: `Modulo_0/frame_representativo.png` (frame **completo**).
+## Módulo 3 — Seguimiento temporal y parámetros fisiológicos
+[Input 5] Confirmación Ground Truth (si/no): Habilita la evaluación de error cuantitativa (MAE/RMSE) del video automático frente a referencias manuales.
 
-```
-Ingrese X inferior (x_inicial):
-Ingrese X superior (x_final):
-Ingrese Y inferior (y_inicial [arriba]):
-Ingrese Y superior (y_final):
-```
+[Input 6] Límites de pupila en 6 keyframes (x1, x2, y1, y2): (Si Input 5 = si) Coordenadas [px] leídas de Modulo_3/03_inspeccion_keyframes_video.png para marcar la pupila en los cuadros seleccionados.
 
-| Variable | Significado |
-|---|---|
-| `x_inicial` | borde izquierdo de la ROI |
-| `x_final` | borde derecho de la ROI |
-| `y_inicial` | borde **superior** de la ROI |
-| `y_final` | borde **inferior** de la ROI |
-
-Debe cumplirse `x_inicial < x_final` e `y_inicial < y_final`. La ROI tiene que contener el ojo completo (pupila, iris y parte de la esclerótica) con un margen que permita que la pupila se mueva durante el video sin salirse.
-
-### Input 3 — Límites de la pupila en 3 frames de validación (Módulo 2)
-
-Figura de referencia: `Modulo_2/09_inspeccion_anotacion_manual.png` (vista ampliada alrededor de la pupila, con grilla cada 5 px y subgrilla cada 1 px).
-
-Se repite para cada frame (t + 0.5 s, t + 1.0 s, t + 1.5 s):
-
-```
-Ingrese los límites del disco pupilar para el frame t + 0.5s:
-  x_izq (límite izquierdo [px]):
-  x_der (límite derecho [px]):
-  y_sup (límite superior [px]):
-  y_inf (límite inferior [px]):
-```
-
-| Variable | Significado |
-|---|---|
-| `x_izq` / `x_der` | bordes izquierdo y derecho del disco **pupilar** |
-| `y_sup` / `y_inf` | bordes superior e inferior del disco pupilar |
-
-- Son límites de la **pupila**, no del iris ni de la ROI.
-- Las coordenadas son **relativas a la ROI** del Input 2. Se leen directamente de los ejes de la figura 09, que ya están en ese sistema.
-- Con estos cuatro valores el script construye una elipse de referencia y la compara con cada método de segmentación.
-- Si se ingresa algo que no es un entero, el script asigna valores por defecto (`98, 122, 57, 83`) que solo sirven para el video original. Con otro video, esto invalida la validación.
-
-### Input 4 — ¿Validación con ground truth? (Módulo 3)
-
-Figura de referencia: `Modulo_3/03_inspeccion_keyframes_video.png`.
-
-```
-¿Desea ingresar los límites para la validación Ground Truth? (si/no):
-```
-
-| Respuesta | Efecto |
-|---|---|
-| `no` o `n` | Se saltea el ground truth. El video se procesa igual, pero no se calculan MAE/RMSE, no se generan `04_keyframes_ground_truth.png` ni `ground_truth_keyframes.csv` y la curva D(t) no muestra los puntos manuales. |
-| cualquier otra cosa (`si`) | Se piden los límites de la pupila en los 6 keyframes (Input 5). |
-
-### Input 5 — Límites de la pupila en 6 keyframes (Módulo 3)
-
-Figura de referencia: `Modulo_3/03_inspeccion_keyframes_video.png` (grilla mayor cada 25 px, menor cada 5 px).
-
-Se repite para cada uno de los 6 keyframes; el número de frame y el tiempo se muestran en el título de cada panel:
-
-```
-Frame 14 (t = 0.47s):
-  x1:
-  x2:
-  y1:
-  y2:
-```
-
-| Variable | Significado |
-|---|---|
-| `x1` / `x2` | bordes izquierdo y derecho de la **pupila** |
-| `y1` / `y2` | bordes superior e inferior de la **pupila** |
-
-- Son límites de la **pupila**, no de la ROI.
-- El sistema de coordenadas es el de los paneles de la figura 03: la ROI del Input 2 **ampliada 5 px por lado**. Por eso los valores no coinciden exactamente con los del Input 3, aunque sea la misma pupila. Siempre leerlos de los ejes de la figura 03.
-- Una entrada inválida asigna un recuadro por defecto (30 %–70 % del panel), que no representa la pupila real.
+[Input 7] Instante del estímulo (t_flash): Segundo del evento luminoso/estímulo (ej: 9.0 o 10.0, presionar Enter para la mitad del tiempo total). Base temporal para calcular estado basal, latencia y velocidades fisiológicas de contracción o dilatación.
