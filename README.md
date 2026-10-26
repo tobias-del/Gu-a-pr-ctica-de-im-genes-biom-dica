@@ -93,12 +93,11 @@ VIDEO_PATH = r"C:\Users\usuario\Videos\mi_video.mp4"
 python pipeline.py
 ```
 
-El script se ejecuta de principio a fin en un solo proceso, pero es **interactivo**: se detiene en cuatro momentos para pedir datos por la terminal. En cada pausa, el script ya guardó una figura de referencia; **hay que abrirla antes de responder**, porque las coordenadas se leen de sus ejes.
+El script se ejecuta de principio a fin en un solo proceso, pero es **interactivo**: se detiene por momentos para pedir datos por la terminal. En cada pausa, el script ya guardó una figura de referencia; **hay que abrirla antes de responder**, porque las coordenadas se leen de sus ejes.
 
-### Diagrama general
 
 ```
- video ──► MÓDULO 0 ──► MÓDULO 1 ──► MÓDULO 2 ──► MÓDULO 3 ──► resultados
+ video ──► MÓDULO 0 ──► MÓDULO 1 ──► MÓDULO 2 ──► MÓDULO 3 ──► MÓDULO 4 ──► resultados
             │                           │            │
             ├─ [Input 1] segundo        │            ├─ [Input 5] ¿validar GT? (si/no)
             └─ [Input 2] límites ROI    │            ├─ [Input 6] límites pupila × 6 keyframes
@@ -106,60 +105,6 @@ El script se ejecuta de principio a fin en un solo proceso, pero es **interactiv
                                         ├─ [Input 3] ¿validar métodos de seg? (si/no)
                                         └─ [Input 4] límites pupila × 3 frames
 ```
-
-### Módulo 0 — Inspección inicial y ROI
-
-1. Abre el video y muestra por terminal FPS, resolución, cantidad de frames y duración.
-2. **[Input 1]** Pide el segundo del frame representativo y lo guarda con ejes en píxeles (`frame_representativo.png`).
-3. **[Input 2]** Pide los límites de la ROI del ojo, leídos sobre esa figura.
-4. Recorta la ROI en color y en escala de grises (`roi_seleccionada.png`).
-
-Todo lo que sigue trabaja sobre esta ROI, así que conviene que encierre el ojo completo con algo de margen.
-
-### Módulo 1 — Fundamentos, espacios de color y mejoramiento
-
-No requiere entradas. Sobre la ROI del frame representativo:
-
-1. Submuestreo espacial (100 %, 50 %, 25 %, 5 %) y cuantización.
-2. Separación en canales RGB y HSV.
-3. Brillo, contraste e histogramas; escalado lineal, ecualización global y CLAHE.
-4. Ruido gaussiano, sal y pimienta y speckle, con filtros de media, mediana y gaussiano.
-5. Detección de bordes (Roberts, Prewitt, Sobel, Laplaciano, Canny).
-6. Transformada de Fourier 2D: magnitud, fase y reconstrucciones cruzadas con el frame en t + 0.5 s.
-7. Densidad espectral de potencia (2D y perfil central 1D).
-8. Filtros pasa-bajos y pasa-altos en frecuencia, comparados con su equivalente espacial. Imprime PSNR y SSIM por terminal.
-
-### Módulo 2 — Segmentación y morfología
-
-1. Localiza automáticamente el centro aproximado de la pupila (mínimo de intensidad tras un suavizado gaussiano fuerte) y recorta una sub-ROI alrededor.
-2. Segmenta con cuatro métodos: **Otsu** (global y jerárquico), **K-Means** (espacio L\*a\*b\*), **Snake** (contornos activos) y **Watershed** (con marcadores).
-3. Compara los métodos y aplica morfología matemática (erosión, dilatación, apertura, cierre y la combinación propuesta) sobre la mejor máscara.
-4. Esqueletización (eje medio y contorno pupilar).
-5. **Validación multiframe:** extrae los frames en t + 0.5 s, t + 1.0 s y t + 1.5 s y guarda una vista ampliada con grilla (`09_inspeccion_anotacion_manual.png`).
-6. **[Input 3]** Pregunta si se quiere hacer la validación métricas manuales.
-7. **[Input 4]** Pide los límites de la pupila en esos 3 frames.
-8. Construye una elipse de referencia con cada anotación y calcula Dice, Jaccard y error de área para cada método. Guarda el CSV y la superposición de contornos.
-
-### Módulo 3 — Características, textura y dinámica temporal
-
-**3.1 Frame segmentado (sin entradas)**
-
-1. Posprocesamiento morfológico de la máscara de Watershed.
-2. Descriptores morfométricos: área, perímetro, centroide, diámetro equivalente, circularidad, excentricidad, etc.
-3. Textura de 1er orden (media, varianza, asimetría, curtosis, entropía por canal RGB).
-4. Textura de 2do orden (GLCM / Haralick por canal RGB).
-
-**3.2 Video completo**
-
-1. Selecciona automáticamente **6 keyframes equiespaciados** entre 0.5 s y el final del video menos 0.5 s, y los guarda con grilla (`03_inspeccion_keyframes_video.png`).
-2. **[Input 5]** Pregunta si se quiere hacer la validación con ground truth manual.
-3. **[Input 6]** Si la respuesta es sí, pide los límites de la pupila en los 6 keyframes y construye la tabla de ground truth.
-4. Segmenta la pupila **frame por frame** en todo el video, usando el centro del frame anterior para seguirla, y genera un video anotado.
-5. Suaviza el diámetro con una mediana móvil de 5 muestras.
-6. Si hay ground truth, compara automático vs. manual (MAE y RMSE de área y diámetro).
-7. Grafica la curva D(t) y la trayectoria del centroide.
-8. Extrae los parámetros fisiológicos característicos (ver Sección 7).
----
 
 ## 5. Entradas por terminal (inputs)
 
@@ -256,109 +201,3 @@ Frame 14 (t = 0.47s):
 - Son límites de la **pupila**, no de la ROI.
 - El sistema de coordenadas es el de los paneles de la figura 03: la ROI del Input 2 **ampliada 5 px por lado**. Por eso los valores no coinciden exactamente con los del Input 3, aunque sea la misma pupila. Siempre leerlos de los ejes de la figura 03.
 - Una entrada inválida asigna un recuadro por defecto (30 %–70 % del panel), que no representa la pupila real.
-
----
-
-## 6. Resultados generados
-
-Todo queda en `resultados_pipeline/`, en la subcarpeta del módulo correspondiente.
-
-### Módulo 0
-| Archivo | Contenido |
-|---|---|
-| `frame_representativo.png` | Frame completo con ejes, para elegir la ROI |
-| `roi_seleccionada.png` | ROI en color y en grises |
-
-### Módulo 1
-| Archivo | Contenido |
-|---|---|
-| `00_submuestreo_espacial.png` | ROI a distintas resoluciones |
-| `01_cuantizacion.png` | Cuantización en color y en grises |
-| `02_espacios_de_color.png` | Canales RGB y HSV |
-| `03_histogramas_brillo_contraste.png` | Brillo, contraste e histogramas |
-| `04_escalado_y_ecualizacion.png` | Escalado lineal, ecualización global y CLAHE |
-| `05_ruido_y_filtrado_espacial.png` | Ruidos y filtros espaciales |
-| `06_histogramas_ruido.png` | Histogramas de las imágenes ruidosas |
-| `07_deteccion_de_bordes.png` | Detectores de bordes |
-| `08_fourier_magnitud_fase.png` | Magnitud y fase de la TFD-2D |
-| `09_fourier_reconstruccion.png` | Reconstrucciones con solo magnitud, solo fase y cruzadas |
-| `10_psd_2d_comparacion.png` | PSD 2D original vs. filtrada |
-| `11_psd_1d_perfil_central.png` | Perfil central de la PSD |
-| `12_filtrado_frecuencial_pasabajos_pasaaltos.png` | Filtrado en frecuencia vs. espacial |
-
-### Módulo 2
-| Archivo | Contenido |
-|---|---|
-| `01_sub_roi_estimacion_centro.png` | Sub-ROI y centro estimado |
-| `02_segmentacion_otsu.png` | Otsu global y jerárquico |
-| `03_segmentacion_kmeans.png` | K-Means para distintos K |
-| `04_segmentacion_snake.png` | Contorno activo |
-| `05_segmentacion_watershed.png` | Watershed con marcadores |
-| `06_comparativa_metodos_segmentacion.png` | Comparación de los cuatro métodos |
-| `07_operaciones_morfologicas.png` | Erosión, dilatación, apertura, cierre y combinada |
-| `08_esqueletizacion.png` | Eje medio y contorno pupilar |
-| `09_inspeccion_anotacion_manual.png` | Frames de validación (para el Input 3) |
-| CSV de validación | Dice, Jaccard y error de área por método y frame |
-| Figura de superposición | Contornos de cada método sobre los frames de validación |
-
-### Módulo 3
-| Archivo | Contenido |
-|---|---|
-| `01_descriptores_morfometricos_frame.png` | Contorno, centroide y descriptores |
-| `descriptores_textura_1er_orden.csv` | Textura de 1er orden por canal |
-| `02_matrices_glcm_rgb.png` | Matrices GLCM |
-| `descriptores_textura_2do_orden_glcm.csv` | Descriptores de Haralick |
-| `03_inspeccion_keyframes_video.png` | Keyframes (para el Input 5) |
-| `04_keyframes_ground_truth.png` | Anotaciones manuales *(solo si se validó)* |
-| `ground_truth_keyframes.csv` | Área y diámetro manuales *(solo si se validó)* |
-| `anotado_<nombre_del_video>.mp4` | Video con la pupila segmentada y el centroide |
-| `seguimiento_temporal_pupilometria.csv` | Área, diámetro y centroide frame a frame |
-| `05_curva_dinamica_pupilar.png` | Curva D(t) cruda, filtrada y ground truth |
-| `06_trayectoria_centroide.png` | Movimiento del centroide |
-| `parametros_fisiologicos.csv` | Parámetros fisiológicos de la respuesta |
-
-### Por terminal
-- Datos del video (FPS, resolución, duración).
-- PSNR y SSIM del filtrado (Módulo 1).
-- Métricas de validación de la segmentación (Módulo 2).
-- Descriptores morfométricos y de textura (Módulo 3).
-- MAE y RMSE automático vs. manual, si se validó.
-- Tabla de parámetros fisiológicos.
-
-Cada ejecución **sobrescribe** los resultados anteriores. Para conservarlos, renombrar o mover `resultados_pipeline/` antes de volver a correr el script.
-
-## 7. Instante del estímulo (flash)
-
-El instante en que se aplica el flash **no se pide por terminal**: está fijo en el código del Módulo 3 (sección 3.2, "Extracción y Exportación de Parámetros Fisiológicos"):
-
-```python
-t_flash = 9.0 if t_max_v >= 9.0 else (t_max_v * 0.5)
-```
-
-Es decir, el script asume que el estímulo ocurre en **t = 9 s**, o en la mitad del video si este dura menos de 9 s. Ese valor corresponde al video original.
-
-### Para qué se usa
-
-Todos los parámetros fisiológicos se calculan a partir de `t_flash`:
-
-| Parámetro | Cómo depende de `t_flash` |
-|---|---|
-| Diámetro basal | Promedio del diámetro entre `0.1 · t_flash` y `t_flash` |
-| Diámetro mínimo | Mínimo en la ventana `[t_flash, t_flash + 4 s]` |
-| Latencia | Tiempo entre `t_flash` y el inicio de la constricción |
-| Amplitud y velocidad de constricción | Se calculan a partir del basal y del mínimo |
-| Velocidad de redilatación | Se calcula en el segundo posterior al mínimo |
-
-Si `t_flash` no coincide con el estímulo real, la ventana basal incluye parte de la respuesta (o la ventana de respuesta empieza antes del flash), y **todos los parámetros fisiológicos quedan mal**, aunque la segmentación y la curva D(t) estén bien.
-
-### Qué hay que cambiar
-
-1. Identificar en qué segundo se produce el flash en el video nuevo. Se puede ver reproduciendo el video, o corriendo el script una vez y mirando en `05_curva_dinamica_pupilar.png` dónde empieza la caída del diámetro.
-2. Reemplazar `9.0` por ese instante **en las dos apariciones** de la línea `t_flash = ...` (el bloque de parámetros fisiológicos está repetido en el script). Por ejemplo, para un flash en t = 6.5 s:
-
-   ```python
-   t_flash = 6.5
-   ```
-
-3. Volver a ejecutar el script.
-
