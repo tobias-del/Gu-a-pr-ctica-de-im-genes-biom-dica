@@ -20,7 +20,7 @@ from skimage.metrics import structural_similarity as ssim
 # CONFIGURACIÓN GENERAL Y RUTAS DE SALIDA
 # ---------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-VIDEO_PATH = os.path.join(BASE_DIR,"videos", "video_dilatacion_2.mp4")  # MODIFICAR CON EL NOMBRE DEL VIDEO
+VIDEO_PATH = os.path.join(BASE_DIR,"videos", "video_dilatacion_1.mp4")  # MODIFICAR CON EL NOMBRE DEL VIDEO
 OUTPUT_DIR = os.path.join(BASE_DIR, "resultados_pipeline")    # CARPETA CON RESULTADOS
 
 MOD_DIRS = {
@@ -75,15 +75,15 @@ if not ret:
 imagen_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
 
 # Guardamos y mostramos frame con ejes para inspección visual
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 8))
 plt.imshow(imagen_rgb)
 plt.axis("on")
 plt.grid(True, color="white", linewidth=0.5, alpha=0.5)
 plt.title(f"Frame Representativo (t = {seg_repr:.2f}s | Frame {frame_idx_repr})", fontweight="bold")
 plt.xlabel("Coordenada X [px]")
 plt.ylabel("Coordenada Y [px]")
-plt.xticks(np.arange(0, imagen_rgb.shape[1], 50), fontsize = 8)
-plt.yticks(np.arange(0, imagen_rgb.shape[0], 25), fontsize = 8)
+plt.xticks(np.arange(0, imagen_rgb.shape[1], 100), fontsize = 8)
+plt.yticks(np.arange(0, imagen_rgb.shape[0], 50), fontsize = 8)
 path_frame_repr = os.path.join(MOD_DIRS["0"], "frame_representativo.png")
 plt.savefig(path_frame_repr, bbox_inches="tight")
 plt.close()
@@ -840,46 +840,50 @@ print_header("MÓDULO 2: Algoritmos de Segmentación y Limpieza Morfológica")
 print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 print("2.1 Algoritmos de Segmentación")
 print("------------------------------")
-
 # 1. Localización automática del centro y extracción de Sub-ROI ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Aplicamos un filtro de mediana para atenuar el reflejo del flash y las pestañas finas sin borronear el borde pupilar
-roi_filtrada = cv2.medianBlur(roi_gris, 5)
+# 1. Localización automática del centro y extracción de Sub-ROI AMPLIADA (150x150 px) ~~~~~~~~~~~~~~~~~~~~~~
+# Extracción exclusiva del Canal Rojo (Canal 0) para máximo contraste pupilar
+canal_rojo = roi[:, :, 0] if len(roi.shape) == 3 else roi.copy()
 
-# Localización automática aproximada de la pupila:
-# Con un suavizado gaussiano fuerte las estructuras finas oscuras (pestañas) se diluyen
-# y el mínimo de intensidad queda dentro del disco pupilar
-roi_suavizada = cv2.GaussianBlur(roi_gris, (0, 0), sigmaX=7)
-_, _, (cx, cy), _ = cv2.minMaxLoc(roi_suavizada)   # minMaxLoc devuelve (min, max, pos_min, pos_max)
+# Filtro de mediana inicial para atenuar ruido y textura fina
+roi_filtrada = cv2.medianBlur(canal_rojo, 5)
 
-# Sub-ROI centrada en la pupila (incluye pupila, iris y parte de la esclerótica)
-semilado = 45
-y0, y1 = max(cy - semilado, 0), min(cy + semilado, roi_gris.shape[0])
-x0, x1 = max(cx - semilado, 0), min(cx + semilado, roi_gris.shape[1])
+# Localización gruesa robusta: Un suavizado de mediana amplio (15x15) disuelve
+# pestañas y pequeños reflejos especulares, garantizando que minMaxLoc encuentre el centro pupilar real
+rojo_suave = cv2.medianBlur(canal_rojo, 15)
+_, _, (cx, cy), _ = cv2.minMaxLoc(rojo_suave)   # minMaxLoc devuelve (min, max, pos_min, pos_max)
+
+# Sub-ROI ampliada centrada en el centroide estimado (150x150 px de trabajo)
+semilado = 100
+y0, y1 = max(cy - semilado, 0), min(cy + semilado, canal_rojo.shape[0])
+x0, x1 = max(cx - semilado, 0), min(cx + semilado, canal_rojo.shape[1])
 
 iris_gris = roi_filtrada[y0:y1, x0:x1]
 iris_rgb = roi[y0:y1, x0:x1]
-cx_l, cy_l = cx - x0, cy - y0   # Centro de la pupila en coordenadas de la sub-ROI
+cx_l, cy_l = cx - x0, cy - y0   # Centro de la pupila en coordenadas locales de la sub-ROI ampliada
 
 
 # --- GRÁFICO 1: INSPECCIÓN DE SUB-ROI ---
 fig, axs = plt.subplots(1, 3, figsize=(15, 5))
 
 axs[0].imshow(roi)
-axs[0].plot(cx, cy, "c+", markersize=15)
-axs[0].add_patch(plt.Rectangle((x0, y0), x1 - x0, y1 - y0, fill=False, color="cyan"))
-axs[0].set_title("ROI con centro estimado y sub-ROI")
+axs[0].plot(cx, cy, "c+", markersize=15, markeredgewidth=2)
+axs[0].add_patch(plt.Rectangle((x0, y0), x1 - x0, y1 - y0, fill=False, color="cyan", linewidth=1.5))
+axs[0].set_title("ROI con centro estimado y sub-ROI", fontweight="bold")
 
 axs[1].imshow(iris_rgb)
-axs[1].set_title("Sub-ROI (RGB)")
+axs[1].set_title("Sub-ROI (RGB)", fontweight="bold")
 axs[1].axis("off")
 
 axs[2].imshow(iris_gris, cmap="gray")
-axs[2].set_title("Sub-ROI en grises + mediana 5x5")
+axs[2].set_title("Sub-ROI Canal Rojo + Mediana 5x5", fontweight="bold")
 axs[2].axis("off")
 
 plt.tight_layout()
-plt.savefig(os.path.join(MOD_DIRS["2"], "01_sub_roi_estimacion_centro.png"), bbox_inches="tight")
+path_sub_roi = os.path.join(MOD_DIRS["2"], "01_sub_roi_estimacion_centro.png")
+plt.savefig(path_sub_roi, bbox_inches="tight")
 plt.close()
+
 print("\nIMAGEN 01_sub_roi_estimacion_centro: muestra la sub-roi de trabajo extraída automáticamente para la segmentación")
 print(f" Centro aproximado de la pupila en la ROI: (x={cx}, y={cy})")
 print(f" Tamaño de la sub-ROI de trabajo: {iris_gris.shape[1]}x{iris_gris.shape[0]} px")
@@ -994,23 +998,33 @@ print("\nIMAGEN 03_segmentacion_kmeans: clustering por k-means para distintos va
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # 4. Segmentación por Contornos Activos (Snake) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Radio inicial ajustable manualmente según el tamaño de la pupila en el video
+radio_inicial = 46 
 
-# Contorno inicial: círculo centrado en la pupila con radio mayor al de la pupila
-radio_inicial = 22
+# Contorno inicial: círculo centrado en la pupila (cy_l, cx_l)
 t = np.linspace(0, 2 * np.pi, 200)
-snake_inicial = np.array([cy_l + radio_inicial * np.sin(t),
-                          cx_l + radio_inicial * np.cos(t)]).T   # skimage usa coordenadas (fila, columna)
+snake_inicial = np.array([
+    cy_l + radio_inicial * np.sin(t),
+    cx_l + radio_inicial * np.cos(t)
+]).T  # skimage usa coordenadas (fila, columna) -> (y, x)
 
-# Imagen suavizada para que el gradiente "atraiga" al contorno desde más lejos
+# Imagen suavizada para que el gradiente atraiga al contorno
 imagen_snake = gaussian(iris_gris, sigma=2, preserve_range=False)
 
-# alpha: elasticidad (longitud), beta: rigidez (curvatura) -> fuerzas internas
-# w_line, w_edge: atracción a intensidad / bordes -> fuerzas externas; gamma: paso temporal
-snake = active_contour(imagen_snake, snake_inicial,
-                       alpha=0.015, beta=10, gamma=0.001,
-                       w_line=0, w_edge=1, max_num_iter=2500)
+# Parámetros originales del notebook
+# alpha: elasticidad, beta: rigidez, w_line: atracción a intensidad, w_edge: atracción a bordes
+snake = active_contour(
+    imagen_snake,
+    snake_inicial,
+    alpha=0.015,
+    beta=10,
+    gamma=0.001,
+    w_line=0,
+    w_edge=1,
+    max_num_iter=2500
+)
 
-# Pasamos el contorno a máscara binaria
+# Conversión del contorno ajustado a máscara binaria rellena
 mascara_snake = np.zeros(iris_gris.shape, dtype=bool)
 rr, cc = polygon(snake[:, 0], snake[:, 1], iris_gris.shape)
 mascara_snake[rr, cc] = True
@@ -1032,6 +1046,7 @@ axs[1].axis("off")
 plt.tight_layout()
 plt.savefig(os.path.join(MOD_DIRS["2"], "04_segmentacion_snake.png"), bbox_inches="tight")
 plt.close()
+
 print("\nIMAGEN 04_segmentacion_snake: muestra el contorno inicial y la máscara final\n")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1224,28 +1239,28 @@ for t_val in tiempos_val:
         frames_val[nombre_frame] = cv2.cvtColor(frame_bgr_val, cv2.COLOR_BGR2RGB)
 cap_val.release()
 
-# Helper para estimar centro en ROI
+# Helper para estimar centro en ROI usando Canal Rojo
 def centro_pupila(frame_rgb):
-    gris = cv2.cvtColor(frame_rgb[y_inicial:y_final, x_inicial:x_final], cv2.COLOR_RGB2GRAY)
-    _, _, (cx, cy), _ = cv2.minMaxLoc(cv2.GaussianBlur(gris, (0, 0), sigmaX=7))
+    canal_r = frame_rgb[y_inicial:y_final, x_inicial:x_final, 0]
+    _, _, (cx, cy), _ = cv2.minMaxLoc(cv2.medianBlur(canal_r, 15))
     return cx, cy
 
-# 2. Visualización ampliada con grilla para inspección manual
+# 2. Visualización ampliada con grilla para inspección manual (ROI Completa)
 fig, axs = plt.subplots(1, len(frames_val), figsize=(18, 6))
 if len(frames_val) == 1:
     axs = [axs]
 
 for ax, (nombre, frame) in zip(axs, frames_val.items()):
     roi_f = frame[y_inicial:y_final, x_inicial:x_final]
-    cx_f, cy_f = centro_pupila(frame)
+    alto_f, ancho_f = roi_f.shape[:2]
 
     ax.imshow(roi_f)
-    ax.set_xlim(cx_f - 25, cx_f + 25)
-    ax.set_ylim(cy_f + 25, cy_f - 25)
-    ax.set_xticks(np.arange(cx_f - 25, cx_f + 26, 5))
-    ax.set_yticks(np.arange(cy_f - 25, cy_f + 26, 5))
-    ax.set_xticks(np.arange(cx_f - 25, cx_f + 26, 1), minor=True)
-    ax.set_yticks(np.arange(cy_f - 25, cy_f + 26, 1), minor=True)
+
+    # Grilla sobre la ROI completa del ojo (sin encajonar la pupila)
+    ax.set_xticks(np.arange(0, ancho_f, 25))
+    ax.set_yticks(np.arange(0, alto_f, 25))
+    ax.set_xticks(np.arange(0, ancho_f, 5), minor=True)
+    ax.set_yticks(np.arange(0, alto_f, 5), minor=True)
 
     ax.grid(which="major", color="white", linewidth=0.6, alpha=0.8)
     ax.grid(which="minor", color="white", linewidth=0.2, alpha=0.4)
@@ -1255,7 +1270,8 @@ plt.tight_layout()
 path_anotacion_fig = os.path.join(MOD_DIRS["2"], "09_inspeccion_anotacion_manual.png")
 plt.savefig(path_anotacion_fig, bbox_inches="tight")
 plt.close()
-print("\nIMAGEN 09_inspeccion_anotaciones_manual: muestra los frames de validación para comparar los métodos")
+
+print("\nIMAGEN 09_inspeccion_anotaciones_manual: muestra los frames de validación con la ROI completa")
 
 # 3. Solicitud opcional de límites manuales por terminal (con navegación 'v' para volver)
 opcion_val = input("\n¿Desea obtener las métricas de error respecto de una referencia manual? (si/no): ").strip().lower()
@@ -1438,8 +1454,8 @@ for ax, (nombre, (mascaras_f, ref, (cx_f, cy_f))) in zip(axs[0], resultados_val.
         ax.contour(ref, levels=[0.5], colors="lime", linewidths=2)
     for met, col in zip(metodos_graf, colores):
         ax.contour(mascaras_f[met], levels=[0.5], colors=col, linewidths=1)
-    ax.set_xlim(cx_f - 30, cx_f + 30)
-    ax.set_ylim(cy_f + 30, cy_f - 30)
+    ax.set_xlim(cx_f - semilado, cx_f + semilado)
+    ax.set_ylim(cy_f + semilado, cy_f - semilado)
     ax.set_title(nombre, fontweight="bold")
     ax.axis("off")
 
@@ -1999,7 +2015,7 @@ X_INICIAL, X_FINAL = x0_ojo, x1_ojo
 # -----------------------------------------------------------------------------
 # 1. Segmentación Robusta Frame por Frame
 # -----------------------------------------------------------------------------
-SEMILADO_SUBROI = 35  # Sub-ventana más compacta (70x70 px) para centrarse en la pupila
+SEMILADO_SUBROI = 45 # Sub-ventana más compacta (70x70 px) para centrarse en la pupila
 
 def segmentar_pupila_frame(frame_rgb, cx_prev=None, cy_prev=None):
     roi_rgb = frame_rgb[Y_INICIAL:Y_FINAL, X_INICIAL:X_FINAL]
