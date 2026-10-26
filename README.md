@@ -126,3 +126,17 @@ El pipeline requiere un total de **7 entradas** organizadas en el siguiente fluj
 [Input 6] Límites de pupila en 6 keyframes (x1, x2, y1, y2): (Si Input 5 = si) Coordenadas [px] leídas de Modulo_3/03_inspeccion_keyframes_video.png para marcar la pupila en los cuadros seleccionados.
 
 [Input 7] Instante del estímulo (t_flash): Segundo del evento luminoso/estímulo (ej: 9.0 o 10.0, presionar Enter para la mitad del tiempo total). Base temporal para calcular estado basal, latencia y velocidades fisiológicas de contracción o dilatación.
+
+### Parámetros fijos que pueden requerir ajuste
+
+Algunos valores están pensados para el video original. Si el ojo aparece a otra escala, con otra iluminación o con la pupila de otro tamaño, puede ser necesario modificarlos:
+
+| Parámetro | Módulo | Función | Cuándo ajustarlo |
+|---|---|---|---|
+| `f1`, `f2` | 1 | Rango del escalado lineal de intensidad | Si el histograma de la ROI cae en otro rango |
+| `D0` | 1 | Frecuencia de corte de los filtros frecuenciales | Si cambia mucho el tamaño de la ROI |
+| `semilado` (= 100) | 2 | Mitad del lado de la sub-ROI centrada en la pupila | Si la pupila + iris no entran en la sub-ROI |
+| `radio_inicial` (= 22) | 2 | Radio del contorno inicial del Snake | Debe ser algo mayor que el radio de la pupila |
+| `K_elegido` | 2 | Número de clusters de K-Means usado en la comparativa | Según la figura `03_segmentacion_kmeans.png` |
+| `semilado_subroi` (= 45) | 3 | Sub-ROI de seguimiento en el video completo | Si la pupila se mueve mucho o es muy grande |
+| Ventana de la mediana móvil (= 5) | 3 | Suavizado de la curva D(t) | Según los FPS y el nivel de ruido |
